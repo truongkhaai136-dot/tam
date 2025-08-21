@@ -82,7 +82,7 @@
   right: 20px;
   z-index: 999;
   padding: 10px 15px;
-  background-color: #f44336;
+  background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 8px;
@@ -187,13 +187,10 @@
           }
         });
         
-        // --- SỬA LỖI LOGIC TẠI ĐÂY ---
         const toggleBtn = document.getElementById('togglePause');
 
-        // 1. Gán sự kiện cho nút Play/Pause
         toggleBtn.onclick = function () {
           if (!player) return;
-          // Đơn giản là ra lệnh play() hoặc pause()
           if (player.paused) {
               player.play();
           } else {
@@ -201,19 +198,21 @@
           }
         };
 
-        // 2. Lắng nghe sự kiện từ video để cập nhật trạng thái và BẮT ĐẦU ĐỒNG BỘ
         player.on('play', () => { 
             isPlaying = true;
-            toggleBtn.textContent = 'Pause'; 
-            requestAnimationFrame(trackCurrentLine); // Bắt đầu vòng lặp đồng bộ
+            toggleBtn.textContent = 'Pause';
+            toggleBtn.style.backgroundColor = '#28a745';
+            requestAnimationFrame(trackCurrentLine);
         });
         player.on('pause', () => { 
             isPlaying = false;
             toggleBtn.textContent = 'Play'; 
+            toggleBtn.style.backgroundColor = '#f44336';
         });
         player.on('end', () => { 
             isPlaying = false;
             toggleBtn.textContent = 'Play'; 
+            toggleBtn.style.backgroundColor = '#6c757d';
         });
 
       } catch (e) {
@@ -322,7 +321,7 @@ document.addEventListener('dblclick', e => {
                 div.appendChild(resultEl);
             };
             recognition.onerror = function(event) {
-                alert('Error occurred in recognition: ' + event.error);
+                alert('Error occurred in recognition: '  + event.error);
                 mediaRecorder.stop();
             };
             recognition.start();
