@@ -96,10 +96,12 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  async function trackCurrentLine() {
+  function trackCurrentLine() {
     if (!player || !isPlaying) return;
 
-    const currentTime = await player.getCurrentTime();
+    // SỬA LỖI TẠI ĐÂY: Dùng player.currentTime thay vì await player.getCurrentTime()
+    const currentTime = player.currentTime; 
+    
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
