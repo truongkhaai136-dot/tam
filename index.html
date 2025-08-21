@@ -1,188 +1,265 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="utf-8"/>
-<title>Transcript Player (Final Version)</title>
-<style>
-    body { font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; }
-    .container { max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    #player { margin-bottom: 15px; }
-    .line { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; transition: background-color 0.2s; }
-    .line:hover { background-color: #eef; }
-    .highlight { background-color: #d1ecf1 !important; font-weight: bold; }
-    #status-box { margin-top: 15px; padding: 10px; border-radius: 5px; font-weight: bold; }
-    .status-ok { background-color: #e8f5e9; color: #2e7d32; }
-    .status-error { background-color: #ffebee; color: #c62828; }
-    .status-info { background-color: #e3f2fd; color: #1565c0; }
-    textarea, input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 15px; border: none; border-radius: 5px; background-color: #1a73e8; color: white; cursor: pointer; font-size: 14px; margin-right: 10px; }
-    button:hover { background-color: #185abc; }
-</style>
-<script src="https://geo.dailymotion.com/player.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcript Player</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header, .controls, .transcript-area {
+            padding: 20px;
+        }
+        .header {
+            background-color: #1877f2;
+            color: white;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .controls {
+            background-color: #f7f8fa;
+            border-bottom: 1px solid #dddfe2;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background-color: #1877f2;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #166fe5;
+        }
+        #player-container {
+            position: relative;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: black;
+        }
+        #player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .transcript-area {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .line {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            line-height: 1.5;
+        }
+        .line:hover {
+            background-color: #f0f2f5;
+        }
+        .highlight {
+            background-color: #e7f3ff !important;
+            color: #1877f2;
+            font-weight: 600;
+        }
+        #status {
+            padding: 10px 20px;
+            font-weight: 500;
+            text-align: center;
+        }
+        .status-error { color: #fa383e; }
+        .status-ok { color: #00a400; }
+    </style>
+    <script src="https://geo.dailymotion.com/player.js"></script>
 </head>
 <body>
 
 <div class="container">
-    <h2>Trình Phát Transcript</h2>
-    <label>🔗 Dailymotion Video ID: <input id="videoIdInput" type="text" value=""/></label><br/><br/>
-    <label>📝 English Transcript: <textarea id="scriptEN" rows="5"></textarea></label><br/><br/>
-    <button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button>
-    <div id="status-box" class="status-info">Trạng thái: Sẵn sàng. Vui lòng nhập ID và script.</div>
-    <hr>
-    <div id="player"></div>
-    <div id="transcript"></div>
+    <div class="header">
+        <h1>Dailymotion Transcript Player</h1>
+    </div>
+
+    <div class="controls">
+        <label for="videoIdInput">Dailymotion Video ID</label>
+        <input id="videoIdInput" type="text" placeholder="Ví dụ: x7z3k6i">
+
+        <label for="scriptEN">Transcript (định dạng phút:giây)</label>
+        <textarea id="scriptEN" rows="6" placeholder="0:01&#10;Dòng transcript đầu tiên&#10;0:05&#10;Dòng transcript thứ hai..."></textarea>
+
+        <button id="loadBtn">▶️ Tải Video & Script</button>
+        <div id="status"></div>
+    </div>
+
+    <div id="player-container">
+        <div id="player"></div>
+    </div>
+
+    <div class="transcript-area">
+        <div id="transcript"></div>
+    </div>
 </div>
 
 <script>
+    const loadBtn = document.getElementById('loadBtn');
+    const videoIdInput = document.getElementById('videoIdInput');
+    const scriptENInput = document.getElementById('scriptEN');
+    const transcriptContainer = document.getElementById('transcript');
+    const statusDiv = document.getElementById('status');
+    const playerDiv = document.getElementById('player');
+
     let player;
     let transcriptData = [];
     let isPlaying = false;
     let animationFrameId;
 
-    const statusBox = () => document.getElementById('status-box');
-
-    function updateStatus(message, type = 'info') {
-        const box = statusBox();
-        box.textContent = `Trạng thái: ${message}`;
-        box.className = 'status-box'; // Reset classes
-        if (type === 'ok') box.classList.add('status-ok');
-        else if (type === 'error') box.classList.add('status-error');
-        else box.classList.add('status-info');
-    }
-
-    function trackCurrentLine() {
-        if (!player || !isPlaying) {
-            return;
-        }
-
-        const currentTime = player.currentTime;
-        if (typeof currentTime !== 'number') {
-            updateStatus('Không thể lấy thời gian video.', 'error');
-            return; // Stop the loop if time is invalid
-        }
-        
-        let currentId = null;
-        for (let i = 0; i < transcriptData.length; i++) {
-            const line = transcriptData[i];
-            if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-                currentId = line.id;
-                break;
-            }
-        }
-        
-        // Only update DOM if the active line changes
-        const activeElement = document.querySelector('.highlight');
-        const activeId = activeElement ? activeElement.id : null;
-
-        if (currentId !== activeId) {
-            if (activeElement) {
-                activeElement.classList.remove('highlight');
-            }
-
-            if (currentId) {
-                const newActiveEl = document.getElementById(currentId);
-                if (newActiveEl) {
-                    newActiveEl.classList.add('highlight');
-                    newActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    updateStatus(`Đang phát ở giây ${currentTime.toFixed(1)}s. Hiển thị dòng: ${currentId}.`, 'ok');
-                }
-            } else {
-                 updateStatus(`Đang phát ở giây ${currentTime.toFixed(1)}s. Chờ mốc thời gian tiếp theo...`, 'info');
-            }
-        }
-        
-        animationFrameId = requestAnimationFrame(trackCurrentLine);
+    function updateStatus(message, isError = false) {
+        statusDiv.textContent = message;
+        statusDiv.className = isError ? 'status-error' : 'status-ok';
     }
 
     function parseTranscript(rawText) {
         const lines = rawText.trim().split('\n');
-        const parsedData = [];
+        const data = [];
         let currentTime = null;
         let currentText = [];
 
         for (const line of lines) {
-            const match = line.match(/^(\d+):(\d{2})$/);
-            if (match) {
+            const timeMatch = line.match(/^(\d+):(\d{2})$/);
+            if (timeMatch) {
                 if (currentTime !== null && currentText.length > 0) {
-                    parsedData.push({ time: currentTime, text: currentText.join('<br>') });
+                    data.push({ time: currentTime, text: currentText.join('<br>') });
                 }
-                currentTime = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+                currentTime = parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10);
                 currentText = [];
             } else if (line.trim()) {
                 currentText.push(line.trim());
             }
         }
         if (currentTime !== null && currentText.length > 0) {
-            parsedData.push({ time: currentTime, text: currentText.join('<br>') });
+            data.push({ time: currentTime, text: currentText.join('<br>') });
         }
-        return parsedData;
+        return data;
     }
 
-    async function loadVideoAndTranscript() {
-        updateStatus('Đang tải...', 'info');
+    function syncTranscript() {
+        if (!player || !isPlaying) return;
+
+        const currentTime = player.currentTime;
+        if (typeof currentTime !== 'number') {
+            animationFrameId = requestAnimationFrame(syncTranscript);
+            return;
+        }
+
+        let currentLineId = null;
+        for (let i = 0; i < transcriptData.length; i++) {
+            const line = transcriptData[i];
+            if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+                currentLineId = `line-${i}`;
+                break;
+            }
+        }
+
+        const currentHighlight = document.querySelector('.highlight');
+        if (!currentHighlight || currentHighlight.id !== currentLineId) {
+            if (currentHighlight) {
+                currentHighlight.classList.remove('highlight');
+            }
+            if (currentLineId) {
+                const newLine = document.getElementById(currentLineId);
+                if (newLine) {
+                    newLine.classList.add('highlight');
+                    newLine.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                }
+            }
+        }
+        animationFrameId = requestAnimationFrame(syncTranscript);
+    }
+
+    async function initializePlayer() {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         isPlaying = false;
 
-        const videoId = document.getElementById('videoIdInput').value.trim();
+        const videoId = videoIdInput.value.trim();
+        const scriptText = scriptENInput.value.trim();
+
         if (!videoId) {
-            updateStatus('Vui lòng nhập Video ID.', 'error');
+            updateStatus('Lỗi: Vui lòng nhập Video ID.', true);
+            return;
+        }
+        if (!scriptText) {
+            updateStatus('Lỗi: Vui lòng nhập transcript.', true);
             return;
         }
 
-        const rawEN = document.getElementById('scriptEN').value.trim();
-        if (!rawEN) {
-            updateStatus('Vui lòng nhập nội dung script.', 'error');
-            return;
-        }
-
-        transcriptData = parseTranscript(rawEN);
+        transcriptData = parseTranscript(scriptText);
         if (transcriptData.length === 0) {
-            updateStatus('Script không hợp lệ hoặc không có mốc thời gian (phút:giây).', 'error');
+            updateStatus('Lỗi: Script không hợp lệ. Hãy chắc chắn có mốc thời gian (ví dụ: 0:05).', true);
             return;
         }
 
-        const transcriptContainer = document.getElementById('transcript');
+        updateStatus('Đang tải...', false);
+
         transcriptContainer.innerHTML = '';
         transcriptData.forEach((line, index) => {
             const div = document.createElement('div');
+            div.id = `line-${index}`;
             div.className = 'line';
-            div.id = `en_${index}`;
             div.dataset.time = line.time;
             div.innerHTML = `<strong>[${Math.floor(line.time / 60)}:${(line.time % 60).toString().padStart(2, '0')}]</strong> ${line.text}`;
             div.onclick = () => player?.seek(line.time);
             transcriptContainer.appendChild(div);
         });
-
+        
         try {
             if (player) {
                 await player.load(videoId);
             } else {
-                player = await dailymotion.createPlayer('player', { video: videoId, width: '100%' });
-                
-                player.on('play', () => {
-                    isPlaying = true;
-                    updateStatus('Video đang phát.', 'ok');
-                    trackCurrentLine();
-                });
-
-                player.on('pause', () => {
-                    isPlaying = false;
-                    updateStatus('Video đã tạm dừng.', 'info');
-                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                });
-
-                player.on('end', () => {
-                    isPlaying = false;
-                    updateStatus('Video đã kết thúc.', 'info');
-                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                });
+                player = await dailymotion.createPlayer(playerDiv, { video: videoId });
+                player.on('play', () => { isPlaying = true; syncTranscript(); });
+                player.on('pause', () => { isPlaying = false; });
+                player.on('end', () => { isPlaying = false; });
             }
-            updateStatus('Tải video và script thành công. Sẵn sàng phát.', 'ok');
+            updateStatus('Tải thành công! Sẵn sàng phát video.', false);
         } catch (e) {
+            updateStatus('Lỗi: Không thể tải video. Vui lòng kiểm tra lại Video ID.', true);
             console.error(e);
-            updateStatus(`Lỗi khi tải video: ${e.message}. Kiểm tra lại Video ID.`, 'error');
         }
     }
+
+    loadBtn.addEventListener('click', initializePlayer);
 </script>
 
 </body>
