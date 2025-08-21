@@ -97,32 +97,44 @@
   let isPlaying = false;
 
   function trackCurrentLine() {
-    if (!player || !isPlaying) return;
+    console.log("TrackCurrentLine function is running..."); // DEBUG LOG 1
+    if (!player || !isPlaying) {
+      console.log("Exiting: Player not ready or not playing."); // DEBUG LOG
+      return;
+    }
 
-    // SỬA LỖI TẠI ĐÂY: Dùng player.currentTime thay vì await player.getCurrentTime()
-    const currentTime = player.currentTime; 
-    
+    const currentTime = player.currentTime;
+    console.log(`Tracking time: ${currentTime}`); // DEBUG LOG 2
+
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
       if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
         currentId = line.id;
+        console.log(`Found matching line ID: ${currentId}`); // DEBUG LOG 3
         break;
       }
     }
+    
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    
     if (currentId && currentId.startsWith('en_')) {
       const activeEl = document.getElementById(currentId);
       if (activeEl) {
+        console.log("Highlighting and scrolling to element:", activeEl); // DEBUG LOG 4
         activeEl.classList.add('highlight');
         if (!userScrolling) {
             activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+      } else {
+        console.warn(`Element with ID ${currentId} not found!`); // DEBUG LOG
       }
+    } else if (!currentId) {
+        console.log("No matching line found for current time."); // DEBUG LOG 5
     }
 
     if (isPlaying) {
-      requestAnimationFrame(() => trackCurrentLine());
+      requestAnimationFrame(trackCurrentLine); // Note: Removed arrow function for simplicity
     }
   }
 
@@ -201,12 +213,14 @@
         };
 
         player.on('play', () => { 
+            console.log("Player 'play' event fired!"); // DEBUG EVENT
             isPlaying = true;
             toggleBtn.textContent = 'Pause';
             toggleBtn.style.backgroundColor = '#28a745';
-            requestAnimationFrame(() => trackCurrentLine());
+            requestAnimationFrame(trackCurrentLine);
         });
         player.on('pause', () => { 
+            console.log("Player 'pause' event fired!"); // DEBUG EVENT
             isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#f44336';
@@ -243,6 +257,7 @@
         transcript.appendChild(div);
       }
     }
+    console.log("Transcript data loaded:", transcriptData); // DEBUG SCRIPT DATA
   }
 
 document.getElementById('transcript').addEventListener('wheel', () => {
