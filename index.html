@@ -76,19 +76,6 @@
     <div id="transcript"></div>
 </div>
 
-<button id="togglePause" style="
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 999;
-  padding: 10px 15px;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;">Play</button>
-
 <script>
   let player;
   let transcriptData = [];
@@ -187,32 +174,16 @@
           }
         });
         
-        const toggleBtn = document.getElementById('togglePause');
-
-        toggleBtn.onclick = function () {
-          if (!player) return;
-          if (player.paused) {
-              player.play();
-          } else {
-              player.pause();
-          }
-        };
-
+        // Lắng nghe sự kiện từ video để bắt đầu/dừng đồng bộ hóa
         player.on('play', () => { 
             isPlaying = true;
-            toggleBtn.textContent = 'Pause';
-            toggleBtn.style.backgroundColor = '#28a745';
-            requestAnimationFrame(trackCurrentLine);
+            requestAnimationFrame(trackCurrentLine); // Bắt đầu vòng lặp đồng bộ
         });
         player.on('pause', () => { 
             isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#f44336';
         });
         player.on('end', () => { 
             isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#6c757d';
         });
 
       } catch (e) {
