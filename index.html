@@ -120,7 +120,7 @@
     }
 
     if (isPlaying) {
-      requestAnimationFrame(trackCurrentLine);
+      requestAnimationFrame(() => trackCurrentLine());
     }
   }
 
@@ -202,7 +202,7 @@
             isPlaying = true;
             toggleBtn.textContent = 'Pause';
             toggleBtn.style.backgroundColor = '#28a745';
-            requestAnimationFrame(trackCurrentLine);
+            requestAnimationFrame(() => trackCurrentLine());
         });
         player.on('pause', () => { 
             isPlaying = false;
