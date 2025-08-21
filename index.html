@@ -87,7 +87,7 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;">Pause</button>
+  font-size: 14px;">Play</button>
 
 <script>
   let player;
@@ -95,11 +95,6 @@
   let userScrolling = false;
   let scrollTimeout = null;
   let isPlaying = false;
-
-  function onPlayerStateChange() {
-    isPlaying = true;
-    requestAnimationFrame(trackCurrentLine);
-  }
 
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
@@ -191,30 +186,42 @@
             origin: window.location.origin,
           }
         });
-        player.on('play', onPlayerStateChange);
-        player.on('pause', () => isPlaying = false);
-        player.on('end', () => isPlaying = false);
+        
+        // --- SỬA LỖI LOGIC TẠI ĐÂY ---
+        const toggleBtn = document.getElementById('togglePause');
+
+        // 1. Gán sự kiện cho nút Play/Pause
+        toggleBtn.onclick = function () {
+          if (!player) return;
+          // Đơn giản là ra lệnh play() hoặc pause()
+          if (player.paused) {
+              player.play();
+          } else {
+              player.pause();
+          }
+        };
+
+        // 2. Lắng nghe sự kiện từ video để cập nhật trạng thái và BẮT ĐẦU ĐỒNG BỘ
+        player.on('play', () => { 
+            isPlaying = true;
+            toggleBtn.textContent = 'Pause'; 
+            requestAnimationFrame(trackCurrentLine); // Bắt đầu vòng lặp đồng bộ
+        });
+        player.on('pause', () => { 
+            isPlaying = false;
+            toggleBtn.textContent = 'Play'; 
+        });
+        player.on('end', () => { 
+            isPlaying = false;
+            toggleBtn.textContent = 'Play'; 
+        });
+
       } catch (e) {
         console.error("Error creating Dailymotion player:", e);
         alert("Could not create Dailymotion player. Check the video ID and console for errors.");
         return;
       }
     }
-
-    const toggleBtn = document.getElementById('togglePause');
-    toggleBtn.onclick = function () {
-      if (!player) return;
-      if (player.paused) {
-          player.play();
-          this.textContent = 'Pause';
-      } else {
-          player.pause();
-          this.textContent = 'Play';
-      }
-    };
-    player.on('play', () => { toggleBtn.textContent = 'Pause'; });
-    player.on('pause', () => { toggleBtn.textContent = 'Play'; });
-
 
     const en = parseTranscript(rawEN);
     const vi = parseTranscript(rawVI);
