@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript (EN + VI) - Dailymotion Version</title>
+<title>Transcript (EN + VI) - Dailymotion Version (Fixed)</title>
 <style>
     body { font-family: Arial, sans-serif; }
     #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
@@ -96,10 +96,7 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  async function trackCurrentLine() {
-    if (!player || !isPlaying) return;
-
-    const currentTime = await player.getCurrentTime();
+  function highlightTranscript(currentTime) {
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
@@ -114,13 +111,9 @@
       if (activeEl) {
         activeEl.classList.add('highlight');
         if (!userScrolling) {
-            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
-    }
-
-    if (isPlaying) {
-      requestAnimationFrame(() => trackCurrentLine());
     }
   }
 
@@ -151,17 +144,6 @@
     div.id = id;
     div.innerHTML = fallbackText;
     div.onclick = () => { if (player?.seek) player.seek(time); };
-
-    if (className === 'user') {
-      const btn = document.createElement('button');
-      btn.className = 'record-btn';
-      btn.textContent = '🎤';
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        startSpeechRecognition(div, fallbackText);
-      };
-      div.appendChild(btn);
-    }
     return div;
   }
 
@@ -186,7 +168,7 @@
             origin: window.location.origin,
           }
         });
-        
+
         const toggleBtn = document.getElementById('togglePause');
 
         toggleBtn.onclick = function () {
@@ -202,7 +184,6 @@
             isPlaying = true;
             toggleBtn.textContent = 'Pause';
             toggleBtn.style.backgroundColor = '#28a745';
-            requestAnimationFrame(() => trackCurrentLine());
         });
         player.on('pause', () => { 
             isPlaying = false;
@@ -213,6 +194,12 @@
             isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#6c757d';
+        });
+
+        // 🔑 Fix: dùng timeupdate event để đồng bộ script
+        player.on('timeupdate', (event) => {
+          const currentTime = event.time;
+          highlightTranscript(currentTime);
         });
 
       } catch (e) {
@@ -243,13 +230,13 @@
     }
   }
 
-document.getElementById('transcript').addEventListener('wheel', () => {
-  userScrolling = true;
-  clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(() => userScrolling = false, 3000);
-});
+  document.getElementById('transcript').addEventListener('wheel', () => {
+    userScrolling = true;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => userScrolling = false, 3000);
+  });
 
-document.addEventListener('dblclick', e => {
+  document.addEventListener('dblclick', e => {
     const line = e.target.closest('.line');
     if (line) {
       line.contentEditable = true;
@@ -274,93 +261,6 @@ document.addEventListener('dblclick', e => {
     document.execCommand(cmd, false, value);
   }
 
-  function startSpeechRecognition(div, expectedText) {
-    const oldResult = div.querySelector('.result');
-    if (oldResult) oldResult.remove();
-    const oldPlayback = div.querySelector('.playback-container');
-    if (oldPlayback) oldPlayback.remove();
-
-    if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
-      alert('Speech recognition or recording not supported in this browser');
-      return;
-    }
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            const mediaRecorder = new MediaRecorder(stream);
-            const audioChunks = [];
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const playbackContainer = document.createElement('div');
-                playbackContainer.className = 'playback-container result';
-                const listenButton = document.createElement('button');
-                listenButton.textContent = '▶️ Listen Again';
-                listenButton.style.marginTop = '5px';
-                listenButton.onclick = () => new Audio(audioUrl).play();
-                playbackContainer.appendChild(listenButton);
-                div.appendChild(playbackContainer);
-            };
-            mediaRecorder.start();
-
-            const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            recognition.onend = () => {
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop());
-            };
-            recognition.onresult = function(event) {
-                const spokenText = event.results[0][0].transcript;
-                const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]\s*/g, '').toLowerCase());
-                const resultEl = document.createElement('div');
-                resultEl.className = 'result';
-                resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
-                div.appendChild(resultEl);
-            };
-            recognition.onerror = function(event) {
-                alert('Error occurred in recognition: '  + event.error);
-                mediaRecorder.stop();
-            };
-            recognition.start();
-        })
-        .catch(err => {
-            alert('Could not access the microphone. Please grant permission.');
-            console.error("Error accessing microphone:", err);
-        });
-  }
-
-  function similarity(s1, s2) {
-    const longer = s1.length > s2.length ? s1 : s2;
-    const shorter = s1.length > s2.length ? s2 : s1;
-    const longerLength = longer.length;
-    if (longerLength === 0) return 1.0;
-    return (longerLength - editDistance(longer, shorter)) / longerLength;
-  }
-
-  function editDistance(s1, s2) {
-    s1 = s1.toLowerCase();
-    s2 = s2.toLowerCase();
-    const costs = [];
-    for (let i = 0; i <= s1.length; i++) {
-      let lastValue = i;
-      for (let j = 0; j <= s2.length; j++) {
-        if (i === 0) costs[j] = j;
-        else if (j > 0) {
-          let newValue = costs[j - 1];
-          if (s1.charAt(i - 1) !== s2.charAt(j - 1))
-            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-          costs[j - 1] = lastValue;
-          lastValue = newValue;
-        }
-      }
-      if (i > 0) costs[s2.length] = lastValue;
-    }
-    return costs[s2.length];
-  }
-
   function saveScripts() {
     const videoId = document.getElementById('videoIdInput').value.trim();
     const lines = document.querySelectorAll('.line');
@@ -373,7 +273,7 @@ document.addEventListener('dblclick', e => {
         let content = line.innerHTML
             .replace(/<button[^>]*>.*?<\/button>/g, '')
             .replace(/<div class="result.*?">.*?<\/div>/g, '')
-            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<br\s*\/?>(?=\n|$)/gi, '\n')
             .replace(/<[^>]+>/g, '')
             .replace(/\n{2,}/g, '\n')
             .trim();
@@ -399,24 +299,24 @@ document.addEventListener('dblclick', e => {
     a.download = `transcript_${videoId || 'video'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-}
+  }
 
-function loadScriptFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      document.getElementById('videoIdInput').value = data.videoId || '';
-      document.getElementById('scriptEN').value = data.enText || '';
-      document.getElementById('scriptVI').value = data.viText || '';
-    } catch (err) {
-      alert('Invalid JSON file.');
-    }
-  };
-  reader.readAsText(file);
-}
+  function loadScriptFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        document.getElementById('videoIdInput').value = data.videoId || '';
+        document.getElementById('scriptEN').value = data.enText || '';
+        document.getElementById('scriptVI').value = data.viText || '';
+      } catch (err) {
+        alert('Invalid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  }
 </script>
 </body>
 </html>
