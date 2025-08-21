@@ -2,161 +2,415 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript Sync (Minimal Version)</title>
+<title>Transcript (EN + VI) - Dailymotion Version</title>
 <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #player { margin-bottom: 20px; max-width: 800px; }
-    #transcript { max-width: 800px; border-left: 2px solid #eee; padding-left: 15px; }
-    .line { padding: 8px; cursor: pointer; border-radius: 5px; }
-    .line:hover { background-color: #f0f0f0; }
-    .highlight { background-color: #d1ecf1 !important; font-weight: bold; }
-    textarea { width: 100%; box-sizing: border-box; }
-    input { width: 300px; }
-    button { padding: 8px 15px; margin-top: 10px; }
+    body { font-family: Arial, sans-serif; }
+    #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
+    #transcript { max-width: 800px; margin: 0 auto; }
+    .line { padding: 8px; border-bottom: 1px solid #ccc; cursor: pointer; position: relative; }
+    .line:hover { background-color: #eef; }
+    .user { font-weight: bold; }
+    .machine { color: gray; margin-left: 10px; }
+    .line[contenteditable="true"] {
+      background-color: #ffffcc;
+      outline: 1px dashed #999;
+    }
+    .highlight {
+      background-color: #d1ecf1 !important;
+    }
+    .record-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 5px;
+      font-size: 13px;
+      padding-left: 8px;
+    }
+    #toolbar {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 5px;
+      z-index: 1000;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 </style>
 <script src="https://geo.dailymotion.com/player.js"></script>
 </head>
 <body>
-
-<h1>Transcript Synchronizer (Minimal)</h1>
-<div>
-    <label>Dailymotion Video ID:</label><br>
-    <input id="videoIdInput" type="text" value="x7o5w0w">
+<div style="margin: 20px auto; max-width: 800px;">
+<label>🔗 Dailymotion Video ID: <input id="videoIdInput" style="width: 300px;" type="text" value=""/></label><br/><br/>
+<label>📝 English Transcript (Để đồng bộ): <textarea id="scriptEN" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+<label>🇻🇳 Vietnamese Transcript (Tham khảo): <textarea id="scriptVI" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+<br/>
+<button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button>
+<button onclick="saveScripts()">💾 Save Script</button>
+<br/><br/>
+<label>📂 Load Saved Script (.json):
+  <input type="file" id="loadFileInput" accept=".json" onchange="loadScriptFile(event)">
+</label>
 </div>
-<br>
-<div>
-    <label>Transcript:</label><br>
-    <textarea id="scriptInput" rows="8">0:03
-The timer has started.
-0:07
-We are now at seven seconds.
-0:12
-Passing twelve seconds.
-0:15
-Fifteen seconds have passed.
-0:20
-And now twenty.</textarea>
-</div>
-<button onclick="loadVideoAndTranscript()">▶️ Load and Sync</button>
 
 <div id="player"></div>
-<div id="transcript"></div>
+
+<div style="max-width: 800px; margin: 0 auto;">
+    <h3>Transcript (EN + VI)</h3>
+    <div id="toolbar">
+        <button onclick="execCmd('bold')"><b>B</b></button>
+        <button onclick="execCmd('italic')"><i>I</i></button>
+        <button onclick="execCmd('underline')"><u>U</u></button>
+        <input onchange="execCmd('foreColor', this.value)" type="color"/>
+    </div>
+    <div id="transcript"></div>
+</div>
+
+<button id="togglePause" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  padding: 10px 15px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;">Pause</button>
 
 <script>
-    let player;
-    let transcriptData = [];
-    let isPlaying = false;
+  let player;
+  let transcriptData = [];
+  let userScrolling = false;
+  let scrollTimeout = null;
+  let isPlaying = false;
 
-    // Bắt đầu vòng lặp đồng bộ khi video phát
-    function onPlayerStateChange() {
-        isPlaying = true;
-        requestAnimationFrame(trackCurrentLine);
+  function onPlayerStateChange() {
+    isPlaying = true;
+    requestAnimationFrame(trackCurrentLine);
+  }
+
+  function trackCurrentLine() {
+    if (!player || !isPlaying) return;
+
+    const currentTime = player.currentTime;
+    let currentId = null;
+    for (let i = 0; i < transcriptData.length; i++) {
+      const line = transcriptData[i];
+      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+        currentId = line.id;
+        break;
+      }
+    }
+    document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    if (currentId && currentId.startsWith('en_')) {
+      const activeEl = document.getElementById(currentId);
+      if (activeEl) {
+        activeEl.classList.add('highlight');
+        if (!userScrolling) {
+            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     }
 
-    // Vòng lặp chính để theo dõi và tô sáng
-    function trackCurrentLine() {
-        if (!player || !isPlaying) return;
-
-        const currentTime = player.currentTime;
-        let currentId = null;
-
-        for (let i = 0; i < transcriptData.length; i++) {
-            const line = transcriptData[i];
-            const isLastLine = (i === transcriptData.length - 1);
-            if (currentTime >= line.time && (isLastLine || currentTime < transcriptData[i + 1].time)) {
-                currentId = line.id;
-                break;
-            }
-        }
-
-        document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
-        if (currentId) {
-            const activeEl = document.getElementById(currentId);
-            if (activeEl) {
-                activeEl.classList.add('highlight');
-                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        if (isPlaying) {
-            requestAnimationFrame(trackCurrentLine);
-        }
+    if (isPlaying) {
+      requestAnimationFrame(trackCurrentLine);
     }
+  }
 
-    // Phân tích văn bản lời thoại thành dữ liệu
-    function parseTranscript(rawText) {
-        const lines = rawText.trim().split('\n');
-        const parsed = [];
-        let currentTime = null;
-        let currentText = [];
-
-        for (const line of lines) {
-            const match = line.match(/^(\d+):(\d{2})$/);
-            if (match) {
-                if (currentTime !== null && currentText.length) {
-                    parsed.push({ time: currentTime, text: currentText.join(' ') });
-                }
-                currentTime = parseInt(match[1]) * 60 + parseInt(match[2]);
-                currentText = [];
-            } else if (line.trim()) {
-                currentText.push(line.trim());
-            }
-        }
-        if (currentTime !== null && currentText.length) {
-            parsed.push({ time: currentTime, text: currentText.join(' ') });
-        }
-        return parsed;
+  function parseTranscript(raw) {
+    const lines = raw.trim().split('\n');
+    const parsed = [];
+    let currentTime = null, currentText = [];
+    for (const line of lines) {
+      const match = line.match(/^(\d+):(\d{2})$/);
+      if (match) {
+        if (currentTime !== null && currentText.length)
+          parsed.push({ time: currentTime, text: currentText.join('<br>') });
+        currentTime = parseInt(match[1]) * 60 + parseInt(match[2]);
+        currentText = [];
+      } else {
+        currentText.push(line.trim());
+      }
     }
+    if (currentTime !== null && currentText.length)
+      parsed.push({ time: currentTime, text: currentText.join('<br>') });
+    return parsed;
+  }
 
-    // Hàm chính để tải video và lời thoại
-    async function loadVideoAndTranscript() {
-        const videoId = document.getElementById('videoIdInput').value.trim();
-        const rawScript = document.getElementById('scriptInput').value.trim();
-        if (!videoId || !rawScript) {
-            alert('Please provide both a video ID and a transcript.');
-            return;
-        }
+  function createLineCard(id, time, fallbackText, className) {
+    const div = document.createElement('div');
+    div.className = `line ${className}`;
+    div.dataset.time = time;
+    div.id = id;
+    div.innerHTML = fallbackText;
+    div.onclick = () => { if (player?.seek) player.seek(time); };
 
-        // Tạo hoặc tải lại video
-        if (!player) {
-            try {
-                player = await dailymotion.createPlayer('player', {
-                    video: videoId,
-                    width: '800',
-                    height: '450',
-                    params: { origin: window.location.origin }
-                });
-                player.on('play', onPlayerStateChange);
-                player.on('pause', () => isPlaying = false);
-                player.on('end', () => isPlaying = false);
-            } catch (e) {
-                console.error("Error creating player:", e);
-                alert("Could not create player. Check the console (F12) for errors.");
-                return;
-            }
-        } else {
-            player.load({ video: videoId });
-        }
+    if (className === 'user') {
+      const btn = document.createElement('button');
+      btn.className = 'record-btn';
+      btn.textContent = '🎤';
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        startSpeechRecognition(div, fallbackText);
+      };
+      div.appendChild(btn);
+    }
+    return div;
+  }
 
-        // Xử lý và hiển thị lời thoại
-        const parsedScript = parseTranscript(rawScript);
-        const transcriptContainer = document.getElementById('transcript');
-        transcriptContainer.innerHTML = '';
-        transcriptData = [];
+  async function loadVideoAndTranscript() {
+    const videoId = document.getElementById('videoIdInput').value.trim();
+    if (!videoId) {
+        alert('Please enter a Dailymotion video ID.');
+        return;
+    }
+    const rawEN = document.getElementById('scriptEN').value.trim();
+    const rawVI = document.getElementById('scriptVI').value.trim();
 
-        parsedScript.forEach((line, index) => {
-            const lineId = `line_${index}`;
-            transcriptData.push({ id: lineId, time: line.time });
-
-            const div = document.createElement('div');
-            div.className = 'line';
-            div.id = lineId;
-            div.textContent = `[${Math.floor(line.time / 60)}:${(line.time % 60).toString().padStart(2, '0')}] ${line.text}`;
-            div.onclick = () => player.seek(line.time);
-            transcriptContainer.appendChild(div);
+    if (player) {
+      player.load({ video: videoId });
+    } else {
+      try {
+        player = await dailymotion.createPlayer('player', {
+          video: videoId,
+          width: '100%',
+          height: '450',
+          params: {
+            origin: window.location.origin,
+          }
         });
+        player.on('play', onPlayerStateChange);
+        player.on('pause', () => isPlaying = false);
+        player.on('end', () => isPlaying = false);
+      } catch (e) {
+        console.error("Error creating Dailymotion player:", e);
+        alert("Could not create Dailymotion player. Check the video ID and console for errors.");
+        return;
+      }
     }
-</script>
 
+    const toggleBtn = document.getElementById('togglePause');
+    toggleBtn.onclick = function () {
+      if (!player) return;
+      if (player.paused) {
+          player.play();
+          this.textContent = 'Pause';
+      } else {
+          player.pause();
+          this.textContent = 'Play';
+      }
+    };
+    player.on('play', () => { toggleBtn.textContent = 'Pause'; });
+    player.on('pause', () => { toggleBtn.textContent = 'Play'; });
+
+
+    const en = parseTranscript(rawEN);
+    const vi = parseTranscript(rawVI);
+    const transcript = document.getElementById('transcript');
+    transcript.innerHTML = '';
+    transcriptData = [];
+
+    for (let i = 0; i < Math.max(en.length, vi.length); i++) {
+      if (en[i]) {
+        const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
+        const div = createLineCard('en_' + i, en[i].time, text, 'user');
+        transcript.appendChild(div);
+        transcriptData.push({ id: 'en_' + i, time: en[i].time });
+      }
+      if (vi[i]) {
+        const text = `[VI] ${vi[i].text}`;
+        const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
+        transcript.appendChild(div);
+      }
+    }
+  }
+
+document.getElementById('transcript').addEventListener('wheel', () => {
+  userScrolling = true;
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => userScrolling = false, 3000);
+});
+
+document.addEventListener('dblclick', e => {
+    const line = e.target.closest('.line');
+    if (line) {
+      line.contentEditable = true;
+      line.focus();
+    }
+  });
+
+  document.addEventListener('mouseup', e => {
+    const sel = window.getSelection();
+    if (sel.toString().length > 0 && sel.getRangeAt(0).startContainer.parentElement.closest('.line')) {
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      const toolbar = document.getElementById('toolbar');
+      toolbar.style.top = `${window.scrollY + rect.top - 40}px`;
+      toolbar.style.left = `${window.scrollX + rect.left}px`;
+      toolbar.style.display = 'block';
+    } else {
+      document.getElementById('toolbar').style.display = 'none';
+    }
+  });
+
+  function execCmd(cmd, value = null) {
+    document.execCommand(cmd, false, value);
+  }
+
+  function startSpeechRecognition(div, expectedText) {
+    const oldResult = div.querySelector('.result');
+    if (oldResult) oldResult.remove();
+    const oldPlayback = div.querySelector('.playback-container');
+    if (oldPlayback) oldPlayback.remove();
+
+    if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
+      alert('Speech recognition or recording not supported in this browser');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            const mediaRecorder = new MediaRecorder(stream);
+            const audioChunks = [];
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const playbackContainer = document.createElement('div');
+                playbackContainer.className = 'playback-container result';
+                const listenButton = document.createElement('button');
+                listenButton.textContent = '▶️ Listen Again';
+                listenButton.style.marginTop = '5px';
+                listenButton.onclick = () => new Audio(audioUrl).play();
+                playbackContainer.appendChild(listenButton);
+                div.appendChild(playbackContainer);
+            };
+            mediaRecorder.start();
+
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.onend = () => {
+                mediaRecorder.stop();
+                stream.getTracks().forEach(track => track.stop());
+            };
+            recognition.onresult = function(event) {
+                const spokenText = event.results[0][0].transcript;
+                const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]\s*/g, '').toLowerCase());
+                const resultEl = document.createElement('div');
+                resultEl.className = 'result';
+                resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
+                div.appendChild(resultEl);
+            };
+            recognition.onerror = function(event) {
+                alert('Error occurred in recognition: ' + event.error);
+                mediaRecorder.stop();
+            };
+            recognition.start();
+        })
+        .catch(err => {
+            alert('Could not access the microphone. Please grant permission.');
+            console.error("Error accessing microphone:", err);
+        });
+  }
+
+  function similarity(s1, s2) {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    const longerLength = longer.length;
+    if (longerLength === 0) return 1.0;
+    return (longerLength - editDistance(longer, shorter)) / longerLength;
+  }
+
+  function editDistance(s1, s2) {
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+    const costs = [];
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i === 0) costs[j] = j;
+        else if (j > 0) {
+          let newValue = costs[j - 1];
+          if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+          costs[j - 1] = lastValue;
+          lastValue = newValue;
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue;
+    }
+    return costs[s2.length];
+  }
+
+  function saveScripts() {
+    const videoId = document.getElementById('videoIdInput').value.trim();
+    const lines = document.querySelectorAll('.line');
+    const enChunks = [];
+    const viChunks = [];
+    for (const line of lines) {
+        const time = parseInt(line.dataset.time || '0');
+        const minutes = Math.floor(time / 60);
+        const seconds = (time % 60).toString().padStart(2, '0');
+        let content = line.innerHTML
+            .replace(/<button[^>]*>.*?<\/button>/g, '')
+            .replace(/<div class="result.*?">.*?<\/div>/g, '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\n{2,}/g, '\n')
+            .trim();
+        let block;
+        if (line.classList.contains('user')) {
+            const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
+            block = `${minutes}:${seconds}\n${cleanContent}`;
+            enChunks.push(block);
+        } else if (line.classList.contains('machine')) {
+            const cleanContent = content.replace(/^\[VI\]\s*/, '');
+            block = `${minutes}:${seconds}\n${cleanContent}`;
+            viChunks.push(block);
+        }
+    }
+    const blob = new Blob([JSON.stringify({
+        videoId,
+        enText: enChunks.join('\n\n'),
+        viText: viChunks.join('\n\n')
+    }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript_${videoId || 'video'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function loadScriptFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      document.getElementById('videoIdInput').value = data.videoId || '';
+      document.getElementById('scriptEN').value = data.enText || '';
+      document.getElementById('scriptVI').value = data.viText || '';
+    } catch (err) {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
 </body>
 </html>
