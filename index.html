@@ -179,7 +179,6 @@
           video: videoId,
           width: '640',
           height: '360',
-          // SỬA LỖI TẠI ĐÂY: Thêm tham số origin
           params: {
             origin: window.location.origin,
           }
@@ -289,7 +288,7 @@ document.addEventListener('dblclick', e => {
             mediaRecorder.start();
 
             const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'ja-JP';
+            recognition.lang = 'en-US';
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
             recognition.onend = () => {
