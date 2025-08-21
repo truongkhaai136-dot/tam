@@ -3,398 +3,108 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Đồng bộ script với video (kiểu YouTube)</title>
+  <title>Đồng bộ script với video (Highlight như YouTube)</title>
   <style>
-    :root {
-      --bg: #0b0f14;
-      --panel: #10151c;
-      --panel-2: #0f141b;
-      --text: #e8eef7;
-      --muted: #a8b1c0;
-      --accent: #4cc9f0;
-      --active-bg: #18202b;
-      --highlight: #fff3b0;
-      --highlight-text: #1b2432;
-      --border: #1b2637;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0));
-      position: sticky; top: 0; z-index: 10;
-    }
-    header h1 {
-      font-size: 18px;
-      margin: 0 0 6px;
-      letter-spacing: 0.3px;
-    }
-    header .hint { color: var(--muted); font-size: 13px; }
-    .wrap {
-      display: grid;
-      grid-template-columns: minmax(280px, 1fr) 1.2fr minmax(280px, 1fr);
-      gap: 14px;
-      padding: 14px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex; flex-direction: column;
-      min-height: 0;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.25);
-    }
-    .card header {
-      position: static;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel-2);
-    }
-    .card header h2 { margin: 0; font-size: 15px; }
-    .card .content { padding: 12px; min-height: 0; }
-    #playerBox .content { padding: 0; }
-    #playerMount { aspect-ratio: 16/9; width: 100%; background: #000; }
-    .controls {
-      display: flex; gap: 10px; align-items: center;
-      padding: 10px 12px; border-top: 1px solid var(--border);
-      background: var(--panel-2);
-    }
-    .controls label { font-size: 13px; color: var(--muted); }
-    .controls input[type="text"] {
-      background: #0d131a; border: 1px solid var(--border); color: var(--text);
-      padding: 6px 10px; border-radius: 10px; width: 200px;
-    }
-    .btn {
-      padding: 8px 12px;
-      background: #0d131a;
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 10px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .btn:hover { border-color: #2a3b57; }
-    .btn.primary { background: var(--accent); color: #00121a; border-color: transparent; }
-    .stack { display: grid; gap: 8px; }
-    textarea {
-      width: 100%; height: 260px; resize: vertical;
-      background: #0d131a; color: var(--text);
-      border: 1px solid var(--border); border-radius: 12px;
-      padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      line-height: 1.6;
-    }
-    .columns {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      max-height: 440px;
-      overflow: hidden;
-    }
-    .columns.scroll { overflow: auto; }
-    .line {
-      display: grid;
-      grid-template-columns: 70px 1fr;
-      gap: 10px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      align-items: start;
-      cursor: pointer;
-      border: 1px solid transparent;
-    }
-    .line:hover { background: var(--active-bg); }
-    .line.active {
-      background: var(--highlight);
-      color: var(--highlight-text);
-      border-color: #f0d673;
-    }
-    .time {
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-      min-width: 70px;
-    }
-    .ja { font-size: 16px; }
-    .vi { color: #cdd7e3; font-size: 14px; }
-    .footer-hint { color: var(--muted); font-size: 12px; padding: 8px 12px; border-top: 1px solid var(--border); }
-    @media (max-width: 1080px) {
-      .wrap { grid-template-columns: 1fr; }
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#0b0f14; color:#e8eef7; }
+    .wrap { display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:12px; padding:12px; }
+    .card { background:#10151c; border:1px solid #1b2637; border-radius:12px; display:flex; flex-direction:column; }
+    .card header { background:#0f141b; padding:8px 12px; border-bottom:1px solid #1b2637; font-weight:bold; }
+    .card .content { padding:10px; flex:1; overflow:auto; }
+    #playerMount { aspect-ratio:16/9; background:#000; width:100%; }
+    textarea { width:100%; height:200px; background:#0d131a; color:#e8eef7; border:1px solid #1b2637; border-radius:8px; padding:8px; }
+    .btn { padding:6px 10px; border-radius:8px; border:1px solid #1b2637; background:#0d131a; color:#e8eef7; cursor:pointer; }
+    .btn.primary { background:#4cc9f0; color:#00121a; border:none; }
+    .line { display:grid; grid-template-columns:60px 1fr; gap:8px; padding:6px; border-radius:8px; cursor:pointer; }
+    .line.active { background:#fff3b0; color:#1b2432; }
+    .time { color:#a8b1c0; font-variant-numeric: tabular-nums; }
+    .ja { font-size:15px; }
+    .vi { font-size:13px; color:#cdd7e3; }
+    @media(max-width:1000px){ .wrap{grid-template-columns:1fr;} }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Đồng bộ script &amp; video – Highlight như YouTube</h1>
-    <div class="hint">
-      Thay <code>{PLAYER_ID}</code> bằng Player ID của bạn. Có thể đổi video qua tham số URL <code>?v=xID</code>.
-    </div>
-  </header>
-
-  <main class="wrap">
-    <section id="left" class="card">
-      <header><h2>Script (tiếng Nhật / EN, định dạng thời gian)</h2></header>
+  <div class="wrap">
+    <section class="card">
+      <header>Script (gốc)</header>
       <div class="content">
-        <div class="stack">
-<textarea id="scriptInput" spellcheck="false" placeholder="Định dạng chấp nhận:
-00:02
+        <textarea id="scriptInput" placeholder="00:02
 こんな所で生活できたら どんなに幸せだろう そう思った
 
 00:07
-確かにそう思ったけど...
-
-— hoặc —
-
-00:02 こんな所で生活できたら どんなに幸せだろう そう思った
-00:07 確かにそう思ったけど..."></textarea>
-<textarea id="transInput" spellcheck="false" placeholder="(Tuỳ chọn) Bản dịch tiếng Việt — mỗi đoạn tương ứng 1 dòng theo đúng số lượng ở trên"></textarea>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button id="applyBtn" class="btn primary">Áp dụng script</button>
-            <button id="clearBtn" class="btn">Xoá</button>
-            <span class="hint">Klik vào câu để tua video tới thời điểm đó.</span>
-          </div>
-        </div>
-      </div>
-      <div class="footer-hint">
-        Mẹo: Dán toàn bộ script, mỗi mốc thời gian theo dạng <code>mm:ss</code> hoặc <code>h:mm:ss</code>. Hệ thống tự ghép dòng giữa 2 mốc.
+確かにそう思ったけど..."></textarea>
+        <textarea id="transInput" placeholder="(Tuỳ chọn) Bản dịch tiếng Việt, mỗi đoạn 1 dòng ứng với script"></textarea>
+        <button id="applyBtn" class="btn primary">Áp dụng script</button>
       </div>
     </section>
-
-    <section id="playerBox" class="card">
-      <header><h2>Video</h2></header>
+    <section class="card">
+      <header>Video</header>
       <div class="content">
         <div id="playerMount"></div>
-        <div class="controls">
-          <label for="videoId">Video ID:</label>
-          <input id="videoId" type="text" value="x84sh87" />
-          <button id="loadVideo" class="btn">Tải video</button>
+        <div style="margin-top:8px;">
+          Video ID: <input id="videoId" type="text" value="x84sh87" style="width:120px;">
+          <button id="loadVideo" class="btn">Tải</button>
           <button id="playPause" class="btn">Play/Pause</button>
-          <label><input id="followScroll" type="checkbox" checked /> Tự cuộn theo câu</label>
         </div>
       </div>
     </section>
-
-    <section id="right" class="card">
-      <header><h2>Phụ đề (đang phát sẽ được highlight)</h2></header>
-      <div class="content">
-        <div id="lines" class="columns scroll" role="list"></div>
-      </div>
+    <section class="card">
+      <header>Phụ đề (highlight tự động)</header>
+      <div class="content" id="lines"></div>
     </section>
-  </main>
+  </div>
 
-  <!-- Dailymotion Web SDK (Library Script): thay {PLAYER_ID} bằng Player ID của bạn -->
-  <script src="https://geo.dailymotion.com/libs/player/{PLAYER_ID}.js"></script>
+  <script src="https://geo.dailymotion.com/player.js"></script>
   <script>
-  (function() {
-    const qs = new URLSearchParams(location.search);
-    const DEFAULT_VIDEO = qs.get("v") || "x84sh87"; // Đổi qua ?v=xID
     const el = {
-      playerMount: document.getElementById('playerMount'),
-      videoId: document.getElementById('videoId'),
-      loadVideo: document.getElementById('loadVideo'),
-      playPause: document.getElementById('playPause'),
-      followScroll: document.getElementById('followScroll'),
-      lines: document.getElementById('lines'),
       scriptInput: document.getElementById('scriptInput'),
       transInput: document.getElementById('transInput'),
       applyBtn: document.getElementById('applyBtn'),
-      clearBtn: document.getElementById('clearBtn'),
+      lines: document.getElementById('lines'),
+      videoId: document.getElementById('videoId'),
+      loadVideo: document.getElementById('loadVideo'),
+      playPause: document.getElementById('playPause')
     };
+    let player, entries=[], activeIndex=-1;
 
-    el.videoId.value = DEFAULT_VIDEO;
-
-    /** State */
-    let player = null;
-    let entries = []; // { start, end, tStr, ja, vi }
-    let activeIndex = -1;
-
-    /** Utils */
-    const pad = (n) => String(n).padStart(2, '0');
-    const fmt = (sec) => {
-      if (!isFinite(sec) || sec < 0) sec = 0;
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = Math.floor(sec % 60);
-      return (h ? h + ':' : '') + pad(m) + ':' + pad(s);
-    };
-    function parseTime(str) {
-      if (!str) return null;
-      const t = str.trim();
-      // supports mm:ss or h:mm:ss (with or without leading zeros)
-      const m3 = t.match(/^(\d+):([0-5]?\d):([0-5]?\d)$/);
-      if (m3) return (+m3[1])*3600 + (+m3[2])*60 + (+m3[3]);
-      const m2 = t.match(/^([0-5]?\d):([0-5]?\d)$/);
-      if (m2) return (+m2[1])*60 + (+m2[2]);
+    function parseTime(str){
+      if(!str) return null;
+      const m3=str.match(/^(\d+):(\d{2}):(\d{2})$/);
+      if(m3) return (+m3[1])*3600+(+m3[2])*60+(+m3[3]);
+      const m2=str.match(/^(\d{1,2}):(\d{2})$/);
+      if(m2) return (+m2[1])*60+(+m2[2]);
       return null;
     }
-    function parseScriptBlocks(raw) {
-      // Accept patterns:
-      // A) time on a line, text lines follow until next time or blank line
-      // B) "time text" on the same line
-      const lines = raw.replace(/\r\n?/g, '\n').split('\n');
-      const blocks = [];
-      let cur = null;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        // time-only line?
-        let tOnly = parseTime(line);
-        if (tOnly !== null) {
-          // start a new block; consume subsequent non-time lines as text
-          cur = { start: tOnly, ja: '' };
-          // collect following lines until next time or blank
-          let j = i + 1;
-          let collected = [];
-          while (j < lines.length) {
-            const nxt = lines[j];
-            if (!nxt.trim()) { j++; continue; }
-            const maybeT = parseTime(nxt.trim());
-            if (maybeT !== null) break;
-            collected.push(nxt.trim());
-            j++;
-          }
-          cur.ja = collected.join(' ');
-          blocks.push(cur);
-          i = j - 1;
-          cur = null;
-          continue;
-        }
-        // try "time text" inline
-        const m = line.match(/^((\d+:)?\d{1,2}:\d{2})\s+(.+)$/);
-        if (m) {
-          const t = parseTime(m[1]);
-          if (t !== null) {
-            blocks.push({ start: t, ja: m[3].trim() });
-            continue;
-          }
-        }
-        // Orphan text without time: append to last block
-        if (blocks.length) {
-          blocks[blocks.length - 1].ja += (blocks[blocks.length - 1].ja ? ' ' : '') + line;
-        }
+    function parseScript(raw){
+      const lines=raw.replace(/\r\n?/g,'\n').split('\n');
+      const blocks=[];
+      for(let i=0;i<lines.length;i++){
+        const line=lines[i].trim(); if(!line) continue;
+        const m=line.match(/^((\d+:)?\d{1,2}:\d{2})(?:\s+(.+))?$/);
+        if(m){ const t=parseTime(m[1]); if(t!=null){ blocks.push({start:t,ja:m[3]||''}); } continue; }
+        if(parseTime(line)!=null){ const t=parseTime(line); let j=i+1,txt=[]; while(j<lines.length && parseTime(lines[j].trim())==null){ if(lines[j].trim()) txt.push(lines[j].trim()); j++; } blocks.push({start:t,ja:txt.join(' ')}); i=j-1; }
+        else if(blocks.length){ blocks[blocks.length-1].ja += (blocks[blocks.length-1].ja?' ':'')+line; }
       }
-      // sort by start and set end
-      blocks.sort((a,b)=>a.start - b.start);
-      for (let i=0;i<blocks.length;i++) {
-        const next = blocks[i+1];
-        blocks[i].end = next ? Math.max(blocks[i].start, next.start - 0.01) : Number.POSITIVE_INFINITY;
-        blocks[i].tStr = fmt(blocks[i].start);
-      }
+      blocks.sort((a,b)=>a.start-b.start);
+      for(let k=0;k<blocks.length;k++){ blocks[k].end=(blocks[k+1]?blocks[k+1].start:1e9); blocks[k].tStr=new Date(blocks[k].start*1000).toISOString().substr(14,5); }
       return blocks;
     }
-    function parseTransLines(raw) {
-      if (!raw) return [];
-      const arr = raw.replace(/\r\n?/g, '\n').split('\n').map(s=>s.trim()).filter(Boolean);
-      return arr;
-    }
-
-    function renderEntries() {
-      el.lines.innerHTML = '';
-      entries.forEach((e, idx) => {
-        const row = document.createElement('div');
-        row.className = 'line';
-        row.dataset.index = idx;
-
-        const timeEl = document.createElement('div');
-        timeEl.className = 'time';
-        timeEl.textContent = e.tStr;
-
-        const textWrap = document.createElement('div');
-        const ja = document.createElement('div'); ja.className = 'ja'; ja.textContent = e.ja || '';
-        const vi = document.createElement('div'); vi.className = 'vi'; vi.textContent = e.vi || '';
-        textWrap.appendChild(ja);
-        if (e.vi) textWrap.appendChild(vi);
-
-        row.appendChild(timeEl);
-        row.appendChild(textWrap);
-        row.addEventListener('click', () => { if (player) player.seek(e.start); });
+    function renderEntries(){
+      el.lines.innerHTML='';
+      entries.forEach((e,i)=>{
+        const row=document.createElement('div'); row.className='line'; row.dataset.index=i;
+        row.innerHTML='<div class="time">'+e.tStr+'</div><div><div class="ja">'+e.ja+'</div>'+(e.vi?'<div class="vi">'+e.vi+'</div>':'')+'</div>';
+        row.onclick=()=>{ if(player) player.seek(e.start); };
         el.lines.appendChild(row);
       });
     }
+    function setActive(i){ if(i===activeIndex) return; if(activeIndex>=0){ const old=el.lines.querySelector('.line[data-index="'+activeIndex+'"]'); if(old) old.classList.remove('active'); } activeIndex=i; if(i>=0){ const cur=el.lines.querySelector('.line[data-index="'+i+'"]'); if(cur){ cur.classList.add('active'); cur.scrollIntoView({behavior:'smooth',block:'center'}); } } }
+    function onTimeUpdate(sec){ for(let i=0;i<entries.length;i++){ if(sec>=entries[i].start && sec<entries[i].end){ setActive(i); return; } } }
 
-    function setActive(idx, fromVideo = true) {
-      if (idx === activeIndex) return;
-      const prev = el.lines.querySelector('.line.active');
-      if (prev) prev.classList.remove('active');
-      activeIndex = idx;
-      if (idx >= 0) {
-        const cur = el.lines.querySelector(`.line[data-index="${idx}"]`);
-        if (cur) {
-          cur.classList.add('active');
-          if (fromVideo && el.followScroll.checked) {
-            cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-      }
-    }
-
-    function onTimeUpdate(sec) {
-      if (!entries.length) return;
-      // find last entry with start <= sec < end (linear scan is fine for small lists)
-      let lo = 0, hi = entries.length - 1, res = -1;
-      while (lo <= hi) {
-        const mid = (lo + hi) >> 1;
-        if (entries[mid].start <= sec) { res = mid; lo = mid + 1; }
-        else { hi = mid - 1; }
-      }
-      // ensure sec < end
-      if (res >= 0 && sec >= entries[res].end) res = res + 1 < entries.length ? res + 1 : res;
-      setActive(res, true);
-    }
-
-    /** Apply / Clear */
-    el.applyBtn.addEventListener('click', () => {
-      const blocks = parseScriptBlocks(el.scriptInput.value);
-      const trans = parseTransLines(el.transInput.value);
-      entries = blocks.map((b, i) => ({ ...b, vi: trans[i] || '' }));
-      renderEntries();
-      // if player exists, jump to first line for convenience
-      if (player && entries.length) player.seek(entries[0].start);
-      setActive(-1, false);
-    });
-    el.clearBtn.addEventListener('click', () => {
-      el.scriptInput.value = '';
-      el.transInput.value = '';
-      entries = [];
-      el.lines.innerHTML = '';
-      setActive(-1, false);
-    });
-
-    /** Player setup */
-    async function initPlayer(xid) {
-      try {
-        player = await dailymotion.createPlayer('playerMount', { video: xid });
-        // Wire video-time change -> highlight
-        player.on(dailymotion.events.VIDEO_TIMECHANGE, (state) => {
-          // state carries videoTime; fallback to getState if missing
-          const t = (state && typeof state.videoTime === 'number') ? state.videoTime : null;
-          if (t !== null) onTimeUpdate(t);
-        });
-        // Toggle play/pause
-        el.playPause.addEventListener('click', async () => {
-          const st = await player.getState();
-          if (st && st.playerIsPlaying) player.pause(); else player.play();
-        });
-      } catch (e) {
-        console.error(e);
-        alert('Không tạo được Player. Hãy chắc rằng bạn đã thay {PLAYER_ID} bằng Player ID hợp lệ và video ID đúng.');
-      }
-    }
-
-    el.loadVideo.addEventListener('click', () => {
-      const xid = String(el.videoId.value || '').trim();
-      if (!xid) return;
-      if (!player) initPlayer(xid);
-      else player.loadContent({ video: xid, startTime: 0 });
-    });
-
-    // boot
-    initPlayer(DEFAULT_VIDEO);
-  })();
+    el.applyBtn.onclick=()=>{ const blocks=parseScript(el.scriptInput.value); const trans=el.transInput.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); entries=blocks.map((b,i)=>({...b,vi:trans[i]||''})); renderEntries(); activeIndex=-1; };
+    el.loadVideo.onclick=()=>{ const xid=el.videoId.value.trim(); if(player) player.load({video:xid}); else{ player=DM.player(document.getElementById('playerMount'),{video:xid,width:'100%',height:'100%'}); player.addEventListener('timeupdate',e=>{onTimeUpdate(e.time);}); } };
+    el.playPause.onclick=()=>{ if(!player) return; player.togglePlay(); };
+    // init default video
+    el.loadVideo.click();
   </script>
 </body>
 </html>
