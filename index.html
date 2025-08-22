@@ -63,6 +63,7 @@
             <p class="text-gray-500">Đồng bộ lời thoại Dailymotion, luyện phát âm và hơn thế nữa</p>
         </header>
 
+        <!-- Input Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div class="md:col-span-3">
                 <label for="videoId" class="block text-sm font-medium text-gray-700">Dailymotion Video ID</label>
@@ -86,17 +87,22 @@
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Video Player -->
             <div>
                 <div id="player" class="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden"></div>
                  <p id="status" class="text-center mt-2 text-gray-500">Vui lòng nhập ID video và lời thoại để bắt đầu.</p>
             </div>
 
+            <!-- Subtitles -->
             <div id="subtitle-container" class="subtitle-container bg-white p-4 rounded-lg shadow-lg overflow-y-auto border">
-                </div>
+                <!-- Subtitles will be injected here -->
+            </div>
         </div>
     </div>
 
+    <!-- Editor Toolbar -->
     <div id="editor-toolbar" class="editor-toolbar">
         <button id="bold-btn" title="In đậm"><i class="fas fa-bold"></i></button>
         <button id="italic-btn" title="In nghiêng"><i class="fas fa-italic"></i></button>
@@ -125,6 +131,7 @@
         let scrollTimeout;
         const PLAYER_ID = 'dm-player';
         let playerMessageQueue = [];
+        let readyCheckInterval;
 
         // Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -163,14 +170,21 @@
                 const data = JSON.parse(event.data);
                 if (data.id !== PLAYER_ID) return;
 
+                const forceReadyState = () => {
+                    if (isPlayerReady) return;
+                    isPlayerReady = true;
+                    clearInterval(readyCheckInterval);
+                    statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
+                    while(playerMessageQueue.length > 0) {
+                        const message = playerMessageQueue.shift();
+                        postToPlayer(message, true);
+                    }
+                };
+
                 switch (data.event) {
                     case 'apiready':
-                        isPlayerReady = true;
-                        statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                        while(playerMessageQueue.length > 0) {
-                            const message = playerMessageQueue.shift();
-                            postToPlayer(message, true);
-                        }
+                    case 'pong': // Treat 'pong' as a sign of readiness
+                        forceReadyState();
                         break;
                     case 'play':
                         statusEl.textContent = 'Video đang phát...';
@@ -200,6 +214,7 @@
             isPlayerReady = false;
             playerMessageQueue = [];
             lastHighlightedId = null;
+            clearInterval(readyCheckInterval);
 
             try {
                 const enSubs = parseSubtitles(enSubtitlesInput.value);
@@ -347,10 +362,20 @@
 
             postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
             postToPlayer({ command: 'addEventListener', parameters: ['play'] });
+
+            // [FIX] Actively ping the player until it's ready
+            readyCheckInterval = setInterval(() => {
+                if(isPlayerReady) {
+                    clearInterval(readyCheckInterval);
+                    return;
+                }
+                postToPlayer({ command: 'ping' });
+            }, 500);
         }
         
         function postToPlayer(message, forceSend = false) {
-            if (isPlayerReady || forceSend) {
+            const isPing = message.command === 'ping';
+            if (isPlayerReady || forceSend || isPing) {
                 if (player && player.contentWindow) {
                     player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
                 }
