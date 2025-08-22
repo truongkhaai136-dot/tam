@@ -310,7 +310,7 @@
         <input type="color" data-command="foreColor" title="Màu chữ">
     </div>
 
-    <script src="https://api.dmcdn.net/all.js"></script>
+   <script src="https://api.dmcdn.net/all.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const videoIdInput = document.getElementById('videoId');
@@ -602,7 +602,8 @@
 
                     recognition.onerror = (event) => {
                         console.error('Speech recognition error:', event.error);
-                        resultContainer.innerHTML = `<span style="color: ${var(--danger-color)}">Lỗi: ${event.error}</span>`;
+                        // SỬA LỖI Ở ĐÂY: Bỏ `${}` khỏi 'var(--danger-color)'
+                        resultContainer.innerHTML = `<span style="color: var(--danger-color)">Lỗi: ${event.error}</span>`;
                     };
                     
                     recognition.onend = () => {
@@ -622,7 +623,8 @@
                     console.error('Error accessing microphone:', err);
                     alert('Không thể truy cập micro. Vui lòng cấp quyền và thử lại.');
                     const resultContainer = btn.closest('.pronunciation-tool').querySelector('.result-container');
-                    resultContainer.innerHTML = `<span style="color: ${var(--danger-color)}">Lỗi micro</span>`;
+                    // SỬA LỖI Ở ĐÂY: Bỏ `${}` khỏi 'var(--danger-color)'
+                    resultContainer.innerHTML = `<span style="color: var(--danger-color)">Lỗi micro</span>`;
                 }
             }
             
@@ -735,3 +737,4 @@
     </script>
 </body>
 </html>
+
