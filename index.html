@@ -11,41 +11,11 @@
     .line:hover { background-color: #eef; }
     .user { font-weight: bold; }
     .machine { color: gray; margin-left: 10px; }
-    .line[contenteditable="true"] {
-      background-color: #ffffcc;
-      outline: 1px dashed #999;
-    }
-    .highlight {
-      background-color: #d1ecf1 !important;
-    }
-    .record-btn {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .result {
-      margin-top: 5px;
-      font-size: 13px;
-      padding-left: 8px;
-    }
-    #toolbar {
-      display: none;
-      position: absolute;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 5px;
-      z-index: 1000;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+    .line[contenteditable="true"] { background-color: #ffffcc; outline: 1px dashed #999; }
+    .highlight { background-color: #d1ecf1 !important; }
+    .record-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #2196f3; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .result { margin-top: 5px; font-size: 13px; padding-left: 8px; }
+    #toolbar { display: none; position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; z-index: 1000; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 </style>
 <script src="https://geo.dailymotion.com/player.js"></script>
 </head>
@@ -97,52 +67,38 @@
   let isPlaying = false;
   let animationFrameId = null;
 
-  /**
-   * Hàm cốt lõi để đồng bộ hóa transcript.
-   * Nó sẽ chạy liên tục khi video đang phát.
-   */
+  // SỬA LỖI QUAN TRỌNG NHẤT TẠI ĐÂY
+  // Dựa vào lỗi trong Console, chúng ta sửa lại hoàn toàn hàm này.
   function trackCurrentLine() {
-    // Nếu video đã dừng, hủy vòng lặp và thoát.
     if (!player || !isPlaying) {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+      cancelAnimationFrame(animationFrameId);
       return;
     }
 
-    // Lấy thời gian hiện tại của video. Đây là một hành động bất đồng bộ.
-    player.getCurrentTime().then(currentTime => {
-      let currentId = null;
+    // SỬA LỖI: Dùng `player.currentTime` (thuộc tính) thay vì `player.getCurrentTime()` (hàm không tồn tại)
+    // Đây là cách lấy thời gian đồng bộ, không cần .then() nữa.
+    const currentTime = player.currentTime;
 
-      // Tìm ID của dòng transcript tương ứng với thời gian hiện tại.
-      for (let i = 0; i < transcriptData.length; i++) {
-        const line = transcriptData[i];
-        if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-          currentId = line.id;
-          break;
-        }
+    let currentId = null;
+    for (let i = 0; i < transcriptData.length; i++) {
+      const line = transcriptData[i];
+      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+        currentId = line.id;
+        break;
       }
+    }
 
-      const activeEl = document.getElementById(currentId);
-
-      // Chỉ cập nhật giao diện nếu dòng cần highlight đã thay đổi.
-      if (activeEl && !activeEl.classList.contains('highlight')) {
-        document.querySelectorAll('.line.highlight').forEach(el => el.classList.remove('highlight'));
-        activeEl.classList.add('highlight');
-        if (!userScrolling) {
-          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    const activeEl = document.getElementById(currentId);
+    if (activeEl && !activeEl.classList.contains('highlight')) {
+      document.querySelectorAll('.line.highlight').forEach(el => el.classList.remove('highlight'));
+      activeEl.classList.add('highlight');
+      if (!userScrolling) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
+    }
 
-      // **ĐIỂM SỬA LỖI QUAN TRỌNG NHẤT:**
-      // Chỉ yêu cầu khung hình tiếp theo SAU KHI đã xử lý xong khung hình hiện tại.
-      animationFrameId = requestAnimationFrame(trackCurrentLine);
-
-    }).catch(err => {
-      console.error("Lỗi khi lấy thời gian video:", err);
-      // Dù có lỗi, vẫn tiếp tục vòng lặp để thử lại ở khung hình tiếp theo.
-      animationFrameId = requestAnimationFrame(trackCurrentLine);
-    });
+    // Tiếp tục vòng lặp
+    animationFrameId = requestAnimationFrame(trackCurrentLine);
   }
 
 
