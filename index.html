@@ -43,7 +43,6 @@
       z-index: 1000;
     }
 </style>
-<!-- Dailymotion Library Script (không gắn cứng video) -->
 <script src="https://geo.dailymotion.com/libs/player/x1x1x1.js"></script>
 </head>
 <body>
@@ -88,8 +87,27 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
+  // --- HÀM MỚI: Dùng để xử lý việc Play/Pause ---
+  // Gộp logic xử lý vào một hàm để tái sử dụng cho cả nút bấm và phím space
+  function toggleVideoPlayback() {
+    // Nếu player chưa được tải, không làm gì cả
+    if (!player) return;
+
+    const toggleButton = document.getElementById('togglePause');
+    
+    // Sử dụng API getPaused() để kiểm tra trạng thái hiện tại
+    player.getPaused().then(paused => {
+      if (paused) {
+        player.play();
+        toggleButton.textContent = 'Pause';
+      } else {
+        player.pause();
+        toggleButton.textContent = 'Play';
+      }
+    });
+  }
+
   function setupPlayer(videoId) {
-    // tạo player mới
     dailymotion.createPlayer("player", {
       video: videoId,
       width: "640",
@@ -98,34 +116,33 @@
     }).then(p => {
       player = p;
 
-      // xử lý khi click nút Pause
-      document.getElementById('togglePause').onclick = togglePlayPause;
+      // Gán sự kiện click cho nút bấm tới hàm mới
+      document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
       player.addEventListener('play', () => {
+        document.getElementById('togglePause').textContent = 'Pause'; // Cập nhật trạng thái nút khi video play
         trackCurrentLine();
+      });
+      
+      player.addEventListener('pause', () => {
+        document.getElementById('togglePause').textContent = 'Play'; // Cập nhật trạng thái nút khi video pause
       });
     });
   }
 
-  function togglePlayPause() {
-    if (!player) return;
-    player.getPaused().then(paused => {
-      if (!paused) {
-        player.pause();
-        document.getElementById('togglePause').textContent = 'Play';
-      } else {
-        player.play();
-        document.getElementById('togglePause').textContent = 'Pause';
-      }
-    });
-  }
+  // --- THÊM MỚI: Lắng nghe sự kiện nhấn phím trên toàn bộ trang ---
+  document.addEventListener('keydown', (event) => {
+    // Lấy phần tử đang được focus (con trỏ đang nhấp nháy ở đâu)
+    const activeElement = document.activeElement;
+    // Kiểm tra xem người dùng có đang gõ chữ trong ô input hoặc textarea không
+    const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName);
 
-  // --- xử lý phím Space ---
-  document.addEventListener('keydown', function (e) {
-    // ngăn chặn khi gõ Space trong input/textarea
-    if (e.code === 'Space' && !['INPUT','TEXTAREA'].includes(e.target.tagName)) {
-      e.preventDefault();
-      togglePlayPause();
+    // Nếu phím được nhấn là 'Space' VÀ người dùng không đang gõ chữ
+    if (event.code === 'Space' && !isTyping) {
+      // Ngăn hành động mặc định của trình duyệt (cuộn trang)
+      event.preventDefault();
+      // Gọi hàm xử lý Play/Pause
+      toggleVideoPlayback();
     }
   });
 
@@ -154,8 +171,6 @@
       });
     });
   }
-</script>
-
 
   function parseTranscript(raw) {
     const lines = raw.trim().split('\n');
@@ -226,7 +241,7 @@
     }
   }
 
-  // giữ nguyên event scroll, edit, speech recognition, save/load JSON như trước
+  // Giữ nguyên các hàm không thay đổi
   document.getElementById('transcript').addEventListener('wheel', () => {
     userScrolling = true;
     clearTimeout(scrollTimeout);
@@ -257,9 +272,8 @@
     document.execCommand(cmd, false, value);
   }
 
-  // Giữ nguyên hàm startSpeechRecognition, similarity, editDistance, saveScripts, loadScriptFile
-  // (bạn copy nguyên xi từ bản cũ)
+  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition, similarity, editDistance, saveScripts, loadScriptFile
+  // từ file gốc của bạn vào đây nếu có.
 </script>
 </body>
 </html>
-
