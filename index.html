@@ -130,6 +130,8 @@
         let userScrolling = false;
         let scrollTimeout;
         const PLAYER_ID = 'dm-player';
+        // [FIX] Hàng đợi lệnh để giải quyết race condition
+        let playerMessageQueue = [];
 
         // Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -170,18 +172,15 @@
 
                 switch (data.event) {
                     case 'apiready':
-                        console.log("Player API is ready.");
                         isPlayerReady = true;
                         statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                        // [FIXED] Tăng độ trễ để đảm bảo player đã khởi tạo hoàn toàn
-                        setTimeout(() => {
-                            console.log("Sending 'addEventListener' commands to player.");
-                            postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
-                            postToPlayer({ command: 'addEventListener', parameters: ['play'] });
-                        }, 250); // Tăng độ trễ lên 250ms
+                        // [FIX] Xử lý các lệnh đang chờ trong hàng đợi
+                        while(playerMessageQueue.length > 0) {
+                            const message = playerMessageQueue.shift();
+                            postToPlayer(message, true); // Gửi trực tiếp
+                        }
                         break;
                     case 'play':
-                        console.log("Player event: play");
                         statusEl.textContent = 'Video đang phát...';
                         break;
                     case 'timeupdate':
@@ -206,7 +205,10 @@
             }
             statusEl.textContent = 'Đang tải video và lời thoại...';
             playerContainer.innerHTML = '';
+            // Reset state
             isPlayerReady = false;
+            playerMessageQueue = [];
+            lastHighlightedId = null;
 
             try {
                 const enSubs = parseSubtitles(enSubtitlesInput.value);
@@ -329,9 +331,7 @@
                 lineEl.appendChild(viEl);
                 
                 lineEl.addEventListener('click', () => {
-                    if (isPlayerReady) {
-                        postToPlayer({ command: 'seek', parameters: [sub.time] });
-                    }
+                    postToPlayer({ command: 'seek', parameters: [sub.time] });
                     userScrolling = false;
                 });
 
@@ -347,14 +347,22 @@
             player.id = PLAYER_ID;
             player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
             player.setAttribute('frameborder', '0');
-            // [FIXED] Dọn dẹp thuộc tính allow
             player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
             playerContainer.appendChild(player);
-        }
 
-        function postToPlayer(message) {
-            if (player && player.contentWindow) {
-                player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
+            // [FIX] Thêm các lệnh cần thiết vào hàng đợi ngay lập tức
+            postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
+            postToPlayer({ command: 'addEventListener', parameters: ['play'] });
+        }
+        
+        // [FIXED] Sửa lại hàm postToPlayer để sử dụng hàng đợi
+        function postToPlayer(message, forceSend = false) {
+            if (isPlayerReady || forceSend) {
+                if (player && player.contentWindow) {
+                    player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
+                }
+            } else {
+                playerMessageQueue.push(message);
             }
         }
         
