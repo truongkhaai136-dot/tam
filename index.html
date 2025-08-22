@@ -69,7 +69,8 @@
   <input onchange="execCmd('foreColor', this.value)" type="color"/>
 </div>
 <div id="transcript"></div>
-<button id="togglePause" style="
+
+<button id="togglePause" disabled style="
   position: fixed;
   bottom: 20px;
   right: 20px;
@@ -79,8 +80,9 @@
   color: white;
   border: none;
   border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;">Pause</button>
+  cursor: not-allowed;
+  opacity: 0.5;
+  font-size: 14px;">Play</button>
 
 <script>
   let player;
@@ -88,16 +90,15 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
-  // Sửa lỗi - Sử dụng player.play() và player.pause()
   function toggleVideoPlayback() {
     if (player && typeof player.pause === 'function' && typeof player.play === 'function') {
       if (player.paused) {
-        player.play(); // Nếu video đang dừng thì cho phát
+        player.play();
       } else {
-        player.pause(); // Nếu video đang phát thì cho dừng
+        player.pause();
       }
     } else {
-      alert("Video chưa được tải. Vui lòng nhấn 'Load Video + Transcript' trước.");
+      alert("Video chưa được tải hoặc đang tải. Vui lòng đợi một lát.");
     }
   }
 
@@ -107,6 +108,11 @@
     }
     
     document.getElementById('player').innerHTML = '';
+    const toggleButton = document.getElementById('togglePause');
+    // Vô hiệu hóa nút trong khi tải video mới
+    toggleButton.disabled = true;
+    toggleButton.style.opacity = '0.5';
+    toggleButton.style.cursor = 'not-allowed';
 
     dailymotion.createPlayer("player", {
       video: videoId,
@@ -117,19 +123,20 @@
       console.log("Player created successfully!");
       player = p;
 
-      // **BẢN SỬA MỚI NHẤT**
-      // Cập nhật trạng thái nút bấm thành "Play" ngay khi video được tải
-      document.getElementById('togglePause').textContent = 'Play';
-
-      document.getElementById('togglePause').onclick = toggleVideoPlayback;
+      // **SỬA LỖI #1** - Kích hoạt và cập nhật nút khi player đã sẵn sàng
+      toggleButton.disabled = false;
+      toggleButton.style.opacity = '1';
+      toggleButton.style.cursor = 'pointer';
+      toggleButton.textContent = 'Play';
+      toggleButton.onclick = toggleVideoPlayback;
 
       player.on('play', () => {
-        document.getElementById('togglePause').textContent = 'Pause';
+        toggleButton.textContent = 'Pause';
         trackCurrentLine();
       });
       
       player.on('pause', () => {
-        document.getElementById('togglePause').textContent = 'Play';
+        toggleButton.textContent = 'Play';
       });
       
     }).catch(error => {
@@ -139,10 +146,11 @@
     });
   }
 
-  // Tính năng mới - Dừng/phát video bằng phím Space
+  // **SỬA LỖI #2** - Cập nhật điều kiện 'isTyping'
   document.addEventListener('keydown', (event) => {
     const activeElement = document.activeElement;
-    const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName);
+    // Kiểm tra nếu đang gõ trong input, textarea HOẶC một phần tử có thể chỉnh sửa
+    const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName) || activeElement.isContentEditable;
 
     if (event.code === 'Space' && !isTyping) {
       event.preventDefault();
@@ -213,7 +221,6 @@
       btn.textContent = '🎤';
       btn.onclick = (e) => {
         e.stopPropagation();
-        // Cần định nghĩa hàm startSpeechRecognition
       };
       div.appendChild(btn);
     }
