@@ -130,7 +130,6 @@
         let userScrolling = false;
         let scrollTimeout;
         const PLAYER_ID = 'dm-player';
-        // [FIX] Hàng đợi lệnh để giải quyết race condition
         let playerMessageQueue = [];
 
         // Web Speech API
@@ -166,21 +165,27 @@
         // Listen for messages from the Dailymotion player iframe
         window.addEventListener('message', (event) => {
             if (event.origin !== "https://www.dailymotion.com") return;
+            
+            // [DEBUG] Log all messages from Dailymotion
+            // console.log("Message received from Dailymotion:", event.data);
+
             try {
                 const data = JSON.parse(event.data);
                 if (data.id !== PLAYER_ID) return;
 
                 switch (data.event) {
                     case 'apiready':
+                        console.log("✅ Player event received: apiready");
                         isPlayerReady = true;
                         statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                        // [FIX] Xử lý các lệnh đang chờ trong hàng đợi
                         while(playerMessageQueue.length > 0) {
                             const message = playerMessageQueue.shift();
-                            postToPlayer(message, true); // Gửi trực tiếp
+                            console.log("▶️ Processing queued message:", message);
+                            postToPlayer(message, true);
                         }
                         break;
                     case 'play':
+                        console.log("▶️ Player event received: play");
                         statusEl.textContent = 'Video đang phát...';
                         break;
                     case 'timeupdate':
@@ -205,7 +210,6 @@
             }
             statusEl.textContent = 'Đang tải video và lời thoại...';
             playerContainer.innerHTML = '';
-            // Reset state
             isPlayerReady = false;
             playerMessageQueue = [];
             lastHighlightedId = null;
@@ -345,23 +349,24 @@
         function setupPlayer(videoId) {
             player = document.createElement('iframe');
             player.id = PLAYER_ID;
-            player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
+            // [FIX] Đặt src SAU KHI đã thêm vào DOM để đảm bảo listener luôn sẵn sàng
             player.setAttribute('frameborder', '0');
             player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
             playerContainer.appendChild(player);
+            player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
 
-            // [FIX] Thêm các lệnh cần thiết vào hàng đợi ngay lập tức
             postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
             postToPlayer({ command: 'addEventListener', parameters: ['play'] });
         }
         
-        // [FIXED] Sửa lại hàm postToPlayer để sử dụng hàng đợi
         function postToPlayer(message, forceSend = false) {
             if (isPlayerReady || forceSend) {
                 if (player && player.contentWindow) {
+                    console.log("🔼 Sending message to player:", message);
                     player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
                 }
             } else {
+                console.log("▶️ Queuing message for player:", message);
                 playerMessageQueue.push(message);
             }
         }
