@@ -98,12 +98,14 @@
 
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
+    
     const currentTime = player.currentTime;
+
     if (typeof currentTime !== 'number') {
       if (isPlaying) {
         requestAnimationFrame(trackCurrentLine);
       }
-      return;
+      return; 
     }
 
     let currentId = null;
@@ -114,13 +116,9 @@
         break;
       }
     }
-    
-    // DEBUG: Kiểm tra xem có tìm thấy ID không
-    if (!currentId) {
-        console.warn(`🤷‍♂️ No matching script line found for time: ${currentTime.toFixed(2)}s`);
-    }
 
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    
     if (currentId) {
       let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
       const activeEl = document.getElementById(highlightId);
@@ -185,8 +183,13 @@
     }
     const rawEN = document.getElementById('scriptEN').value.trim();
     const rawVI = document.getElementById('scriptVI').value.trim();
+    
+    // ==========================================================
+    // SỬA LỖI CUỐI CÙNG Ở ĐÂY
+    // ==========================================================
     if (player) {
-      player.load({ video: videoId });
+      // Cách gọi đúng để load video mới vào player đã có sẵn
+      player.load(videoId);
     } else {
       try {
         player = await dailymotion.createPlayer('player', {
@@ -248,9 +251,6 @@
       }
     }
     transcriptData.sort((a, b) => a.time - b.time);
-    
-    // DEBUG: Kiểm tra dữ liệu transcript sau khi đã load và sắp xếp
-    console.log("📊 Transcript data loaded and sorted:", transcriptData);
   }
 
   document.getElementById('transcript').addEventListener('wheel', () => {
