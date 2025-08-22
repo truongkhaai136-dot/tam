@@ -96,13 +96,9 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  // ==========================================================
-  // HÀM ĐÃ SỬA LỖI
-  // ==========================================================
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
 
-    // SỬA LỖI: Sử dụng thuộc tính 'player.currentTime' thay vì hàm 'player.getCurrentTime()'
     const currentTime = player.currentTime; 
 
     let currentId = null;
@@ -191,7 +187,7 @@
           width: '100%',
           height: '450',
           params: {
-            origin: window.location.origin,
+            origin: '*', // Sửa lỗi bảo mật Origin khi nhúng video
           }
         });
         
@@ -239,15 +235,15 @@
     for (let i = 0; i < Math.max(en.length, vi.length); i++) {
       if (en[i]) {
         const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
-        const div = createLineCard('en_' + i, en[i].time, text, 'user');
+        const div = createLineCard('en_'_ i, en[i].time, text, 'user');
         transcript.appendChild(div);
-        transcriptData.push({ id: 'en_' + i, time: en[i].time });
+        transcriptData.push({ id: 'en_'_ i, time: en[i].time });
       }
       if (vi[i]) {
         const text = `[VI] ${vi[i].text}`;
-        const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
+        const div = createLineCard('vi_'_ i, vi[i].time, text, 'machine');
         transcript.appendChild(div);
-        transcriptData.push({ id: 'vi_' + i, time: vi[i].time });
+        transcriptData.push({ id: 'vi_'_ i, time: vi[i].time });
       }
     }
     
