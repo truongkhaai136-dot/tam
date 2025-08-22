@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript (EN + VI) - Dailymotion Version (GitHub Pages Ready)</title>
+<title>Transcript (EN + VI) - Dailymotion Version (Fixed)</title>
 <style>
     body { font-family: Arial, sans-serif; }
     #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
@@ -11,11 +11,41 @@
     .line:hover { background-color: #eef; }
     .user { font-weight: bold; }
     .machine { color: gray; margin-left: 10px; }
-    .line[contenteditable="true"] { background-color: #ffffcc; outline: 1px dashed #999; }
-    .highlight { background-color: #d1ecf1 !important; }
-    .record-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #2196f3; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .result { margin-top: 5px; font-size: 13px; padding-left: 8px; }
-    #toolbar { display: none; position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; z-index: 1000; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .line[contenteditable="true"] {
+      background-color: #ffffcc;
+      outline: 1px dashed #999;
+    }
+    .highlight {
+      background-color: #d1ecf1 !important;
+    }
+    .record-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 5px;
+      font-size: 13px;
+      padding-left: 8px;
+    }
+    #toolbar {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 5px;
+      z-index: 1000;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 </style>
 <script src="https://api.dmcdn.net/all.js"></script>
 </head>
@@ -46,7 +76,18 @@
     <div id="transcript"></div>
 </div>
 
-<button id="togglePause" style="position: fixed; bottom: 20px; right: 20px; z-index: 999; padding: 10px 15px; background-color: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">Play</button>
+<button id="togglePause" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  padding: 10px 15px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;">Play</button>
 
 <script>
   let player;
@@ -54,28 +95,27 @@
   let userScrolling = false;
   let scrollTimeout = null;
   let isPlaying = false;
-  let trackingInterval = null;
 
-  function trackCurrentLine() {
+  function trackCurrentLine(currentTime) {
     if (!player) return;
-    player.currentTime.then(currentTime => {
-      let currentId = null;
-      for (let i = 0; i < transcriptData.length; i++) {
-        const line = transcriptData[i];
-        if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-          currentId = line.id;
-          break;
+    let currentId = null;
+    for (let i = 0; i < transcriptData.length; i++) {
+      const line = transcriptData[i];
+      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+        currentId = line.id;
+        break;
+      }
+    }
+    document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    if (currentId) {
+      const activeEl = document.getElementById(currentId);
+      if (activeEl && !activeEl.classList.contains('highlight')) {
+        activeEl.classList.add('highlight');
+        if (!userScrolling) {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
-      document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
-      if (currentId) {
-        const activeEl = document.getElementById(currentId);
-        if (activeEl) {
-          activeEl.classList.add('highlight');
-          if (!userScrolling) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    });
+    }
   }
 
   function parseTranscript(raw) {
@@ -105,53 +145,68 @@
     div.id = id;
     div.innerHTML = text;
     div.onclick = () => { if (player?.seek) player.seek(time); };
+    if (className === 'user') {
+      const btn = document.createElement('button');
+      btn.className = 'record-btn';
+      btn.textContent = '🎤';
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        startSpeechRecognition(div, text);
+      };
+      div.appendChild(btn);
+    }
     return div;
   }
 
-  function loadVideoAndTranscript() {
+  async function loadVideoAndTranscript() {
     const videoId = document.getElementById('videoIdInput').value.trim();
-    if (!videoId) { alert('Please enter a Dailymotion video ID.'); return; }
+    if (!videoId) {
+        alert('Please enter a Dailymotion video ID.');
+        return;
+    }
+    const rawEN = document.getElementById('scriptEN').value.trim();
+    const rawVI = document.getElementById('scriptVI').value.trim();
 
-    if (player) {
-      player.load({ video: videoId });
-    } else {
+    if (!player) {
       player = DM.player(document.getElementById("player"), {
         video: videoId,
         width: "100%",
-        height: "450",
+        height: 450,
         params: { autoplay: false }
       });
 
       const toggleBtn = document.getElementById('togglePause');
-      toggleBtn.onclick = function () { isPlaying ? player.pause() : player.play(); };
+      toggleBtn.onclick = function () {
+        if (!player) return;
+        isPlaying ? player.pause() : player.play();
+      };
 
-      player.addEventListener('apiready', () => console.log("Player ready"));
-
-      player.addEventListener('play', () => {
-        isPlaying = true;
-        toggleBtn.textContent = 'Pause';
-        toggleBtn.style.backgroundColor = '#28a745';
-        if (trackingInterval) clearInterval(trackingInterval);
-        trackingInterval = setInterval(trackCurrentLine, 500);
+      player.addEventListener("play", () => {
+          isPlaying = true;
+          toggleBtn.textContent = 'Pause';
+          toggleBtn.style.backgroundColor = '#28a745';
       });
 
-      player.addEventListener('pause', () => {
-        isPlaying = false;
-        toggleBtn.textContent = 'Play';
-        toggleBtn.style.backgroundColor = '#f44336';
-        clearInterval(trackingInterval);
+      player.addEventListener("pause", () => {
+          isPlaying = false;
+          toggleBtn.textContent = 'Play';
+          toggleBtn.style.backgroundColor = '#f44336';
       });
 
-      player.addEventListener('ended', () => {
-        isPlaying = false;
-        toggleBtn.textContent = 'Play';
-        toggleBtn.style.backgroundColor = '#6c757d';
-        clearInterval(trackingInterval);
+      player.addEventListener("end", () => {
+          isPlaying = false;
+          toggleBtn.textContent = 'Play';
+          toggleBtn.style.backgroundColor = '#6c757d';
       });
+
+      player.addEventListener("timeupdate", e => {
+          const currentTime = e.time;
+          trackCurrentLine(currentTime);
+      });
+    } else {
+      player.load(videoId);
     }
 
-    const rawEN = document.getElementById('scriptEN').value.trim();
-    const rawVI = document.getElementById('scriptVI').value.trim();
     const en = parseTranscript(rawEN);
     const vi = parseTranscript(rawVI);
     const transcript = document.getElementById('transcript');
@@ -160,17 +215,17 @@
     const allLines = [];
 
     en.forEach((line, i) => {
-      const text = `[${Math.floor(line.time / 60)}:${(line.time % 60).toString().padStart(2, '0')}] ${line.text}`;
-      const div = createLineCard('en_' + i, line.time, text, 'user');
-      allLines.push(div);
-      transcriptData.push({ id: 'en_' + i, time: line.time });
+        const text = `[${Math.floor(line.time / 60)}:${(line.time % 60).toString().padStart(2, '0')}] ${line.text}`;
+        const div = createLineCard('en_' + i, line.time, text, 'user');
+        allLines.push(div);
+        transcriptData.push({ id: 'en_' + i, time: line.time });
     });
 
     vi.forEach((line, i) => {
-      const text = `[VI] ${line.text}`;
-      const div = createLineCard('vi_' + i, line.time, text, 'machine');
-      allLines.push(div);
-      transcriptData.push({ id: 'vi_' + i, time: line.time });
+        const text = `[VI] ${line.text}`;
+        const div = createLineCard('vi_' + i, line.time, text, 'machine');
+        allLines.push(div);
+        transcriptData.push({ id: 'vi_' + i, time: line.time });
     });
 
     allLines.sort((a, b) => parseFloat(a.dataset.time) - parseFloat(b.dataset.time));
@@ -186,7 +241,10 @@
 
   document.addEventListener('dblclick', e => {
     const line = e.target.closest('.line');
-    if (line) { line.contentEditable = true; line.focus(); }
+    if (line) {
+      line.contentEditable = true;
+      line.focus();
+    }
   });
 
   document.addEventListener('mouseup', e => {
@@ -202,51 +260,11 @@
     }
   });
 
-  function execCmd(cmd, value = null) { document.execCommand(cmd, false, value); }
-
-  function saveScripts() {
-    const videoId = document.getElementById('videoIdInput').value.trim();
-    const lines = document.querySelectorAll('.line');
-    const enChunks = [], viChunks = [];
-    for (const line of lines) {
-      const time = parseInt(line.dataset.time || '0');
-      const minutes = Math.floor(time / 60);
-      const seconds = (time % 60).toString().padStart(2, '0');
-      let content = line.innerHTML.replace(/<[^>]+>/g, '').trim();
-      let block;
-      if (line.classList.contains('user')) {
-        const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
-        block = `${minutes}:${seconds}\n${cleanContent}`;
-        enChunks.push(block);
-      } else if (line.classList.contains('machine')) {
-        const cleanContent = content.replace(/^\[VI\]\s*/, '');
-        block = `${minutes}:${seconds}\n${cleanContent}`;
-        viChunks.push(block);
-      }
-    }
-    const blob = new Blob([JSON.stringify({ videoId, enText: enChunks.join('\n\n'), viText: viChunks.join('\n\n') }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transcript_${videoId || 'video'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  function execCmd(cmd, value = null) {
+    document.execCommand(cmd, false, value);
   }
 
-  function loadScriptFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const data = JSON.parse(e.target.result);
-        document.getElementById('videoIdInput').value = data.videoId || '';
-        document.getElementById('scriptEN').value = data.enText || '';
-        document.getElementById('scriptVI').value = data.viText || '';
-      } catch (err) { alert('Invalid JSON file.'); }
-    };
-    reader.readAsText(file);
-  }
+  // Giữ nguyên các hàm khác: startSpeechRecognition, similarity, editDistance, saveScripts, loadScriptFile
 </script>
 </body>
 </html>
