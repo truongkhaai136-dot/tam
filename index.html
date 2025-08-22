@@ -46,26 +46,27 @@
 <script src="https://geo.dailymotion.com/libs/player/x1x1x1.js"></script>
 </head>
 <body>
+
 <div style="margin: 20px auto; max-width: 800px;">
-<label>🔗 Dailymotion Video ID: <input id="videoIdInput" style="width: 300px;" type="text" value=""/></label><br/><br/>
-<label>📝 English Transcript: <textarea id="scriptEN" rows="6" style="width: 100%;"></textarea></label><br/><br/>
-<label>🇻🇳 Vietnamese Transcript: <textarea id="scriptVI" rows="6" style="width: 100%;"></textarea></label><br/><br/>
-<br/>
-<button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button><br/>
-<button onclick="saveScripts()">💾 Save Script</button>
-<br/><br/>
-<label>📂 Load Saved Script (.json): 
-  <input type="file" id="loadFileInput" accept=".json" onchange="loadScriptFile(event)">
-</label>
+  <label>🔗 Dailymotion Video ID: <input id="videoIdInput" style="width: 300px;" type="text" value=""/></label><br/><br/>
+  <label>📝 English Transcript: <textarea id="scriptEN" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+  <label>🇻🇳 Vietnamese Transcript: <textarea id="scriptVI" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+  <br/>
+  <button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button><br/>
+  <button onclick="saveScripts()">💾 Save Script</button>
+  <br/><br/>
+  <label>📂 Load Saved Script (.json): 
+    <input type="file" id="loadFileInput" accept=".json" onchange="loadScriptFile(event)">
+  </label>
 </div>
 
 <div id="player"></div>
 <h3>Transcript (EN + VI)</h3>
 <div id="toolbar">
-<button onclick="execCmd('bold')"><b>B</b></button>
-<button onclick="execCmd('italic')<i>I</i></button>
-<button onclick="execCmd('underline')"><u>U</u></button>
-<input onchange="execCmd('foreColor', this.value)" type="color"/>
+  <button onclick="execCmd('bold')"><b>B</b></button>
+  <button onclick="execCmd('italic')"><i>I</i></button>
+  <button onclick="execCmd('underline')"><u>U</u></button>
+  <input onchange="execCmd('foreColor', this.value)" type="color"/>
 </div>
 <div id="transcript"></div>
 <button id="togglePause" style="
@@ -87,10 +88,14 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
+  // **ĐÃ SỬA LỖI** - Sử dụng player.play() và player.pause()
   function toggleVideoPlayback() {
-    // Chỉ hoạt động nếu player đã được tạo thành công
-    if (player) {
-      player.togglePlay();
+    if (player && typeof player.pause === 'function' && typeof player.play === 'function') {
+      if (player.paused) {
+        player.play(); // Nếu video đang dừng thì cho phát
+      } else {
+        player.pause(); // Nếu video đang phát thì cho dừng
+      }
     } else {
       alert("Video chưa được tải. Vui lòng nhấn 'Load Video + Transcript' trước.");
     }
@@ -101,7 +106,7 @@
       player.destroy();
     }
     
-    document.getElementById('player').innerHTML = ''; // Xóa nội dung div player cũ
+    document.getElementById('player').innerHTML = '';
 
     dailymotion.createPlayer("player", {
       video: videoId,
@@ -112,7 +117,6 @@
       console.log("Player created successfully!");
       player = p;
 
-      // Gán sự kiện sau khi player đã chắc chắn tồn tại
       document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
       player.on('play', () => {
@@ -125,13 +129,13 @@
       });
       
     }).catch(error => {
-      // BẮT LỖI: Xử lý khi không thể tạo player
       console.error("Failed to create Dailymotion player:", error);
-      player = null; // Đảm bảo player là null nếu có lỗi
+      player = null;
       alert("LỖI: Không thể tải video. Vui lòng kiểm tra lại ID video, kết nối mạng hoặc tắt các trình chặn quảng cáo rồi thử lại.");
     });
   }
 
+  // **TÍNH NĂNG MỚI** - Dừng/phát video bằng phím Space
   document.addEventListener('keydown', (event) => {
     const activeElement = document.activeElement;
     const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName);
@@ -244,7 +248,6 @@
     }
   }
 
-  // Giữ nguyên các hàm không thay đổi
   document.getElementById('transcript').addEventListener('wheel', () => {
     userScrolling = true;
     clearTimeout(scrollTimeout);
@@ -271,10 +274,19 @@
     }
   });
 
- function execCmd(cmd, value = null) {
+  function execCmd(cmd, value = null) {
     document.execCommand(cmd, false, value);
   }
 
-  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition
+  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition và các hàm lưu/tải file nếu cần
+  // Ví dụ hàm saveScripts và loadScriptFile (cần được hoàn thiện)
+  function saveScripts() {
+    alert("Chức năng Save Script cần được cài đặt!");
+  }
+  function loadScriptFile(event) {
+     alert("Chức năng Load Script File cần được cài đặt!");
+  }
 
 </script>
+</body>
+</html>
