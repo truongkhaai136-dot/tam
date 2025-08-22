@@ -96,11 +96,22 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
+  // ==========================================================
+  // HÀM ĐÃ SỬA LỖI CUỐI CÙNG
+  // ==========================================================
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
+    
     const currentTime = player.currentTime;
-    // DEBUG 1: Kiểm tra xem hàm có đang chạy và thời gian có đúng không
-    console.log(`⏱️ Tracking at time: ${currentTime.toFixed(2)}s`);
+
+    // THÊM ĐIỀU KIỆN KIỂM TRA: Chỉ chạy tiếp khi currentTime là một con số hợp lệ
+    if (typeof currentTime !== 'number') {
+      // Nếu chưa hợp lệ, đợi khung hình tiếp theo rồi thử lại
+      if (isPlaying) {
+        requestAnimationFrame(trackCurrentLine);
+      }
+      return; 
+    }
 
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
@@ -114,19 +125,12 @@
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
     
     if (currentId) {
-      // DEBUG 2: Kiểm tra xem có tìm thấy ID của dòng hiện tại không
-      console.log(`✅ Found current line ID: ${currentId}`);
       let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
       const activeEl = document.getElementById(highlightId);
       if (activeEl) {
         activeEl.classList.add('highlight');
         if (!userScrolling) {
-          // DEBUG 3: Kiểm tra xem có thực hiện lệnh cuộn không
-          console.log(`📜 Scrolling to element: #${highlightId}`);
           activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          // DEBUG 4: Kiểm tra xem việc cuộn có bị người dùng tạm dừng không
-          console.log("🚫 Scrolling paused by user.");
         }
       }
     }
@@ -206,16 +210,12 @@
           }
         };
         player.on('play', () => {
-          // DEBUG 5: Kiểm tra xem sự kiện 'play' có được kích hoạt không
-          console.log("▶️ Play event fired. Starting tracking loop.");
           isPlaying = true;
           toggleBtn.textContent = 'Pause';
           toggleBtn.style.backgroundColor = '#28a745';
           requestAnimationFrame(() => trackCurrentLine());
         });
         player.on('pause', () => {
-          // DEBUG 6: Kiểm tra xem sự kiện 'pause' có được kích hoạt không
-          console.log("⏸️ Pause event fired. Stopping tracking loop.");
           isPlaying = false;
           toggleBtn.textContent = 'Play';
           toggleBtn.style.backgroundColor = '#f44336';
