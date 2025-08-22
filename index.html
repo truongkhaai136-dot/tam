@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
 <meta charset="utf-8"/>
 <title>Transcript (EN + VI) - Dailymotion</title>
@@ -63,7 +63,7 @@
 <h3>Transcript (EN + VI)</h3>
 <div id="toolbar">
 <button onclick="execCmd('bold')"><b>B</b></button>
-<button onclick="execCmd('italic')"><i>I</i></button>
+<button onclick="execCmd('italic')<i>I</i></button>
 <button onclick="execCmd('underline')"><u>U</u></button>
 <input onchange="execCmd('foreColor', this.value)" type="color"/>
 </div>
@@ -87,30 +87,34 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
-  // --- HÀM CUỐI CÙNG, ĐÁNG TIN CẬY NHẤT ---
   function toggleVideoPlayback() {
-    if (!player) return;
-    // Sử dụng hàm togglePlay() gốc của Dailymotion để đảm bảo hoạt động chính xác
-    player.togglePlay();
+    // Chỉ hoạt động nếu player đã được tạo thành công
+    if (player) {
+      player.togglePlay();
+    } else {
+      alert("Video chưa được tải. Vui lòng nhấn 'Load Video + Transcript' trước.");
+    }
   }
 
   function setupPlayer(videoId) {
-    // Xóa player cũ nếu có để tránh lỗi
     if (player) {
       player.destroy();
     }
     
+    document.getElementById('player').innerHTML = ''; // Xóa nội dung div player cũ
+
     dailymotion.createPlayer("player", {
       video: videoId,
       width: "640",
       height: "360",
       params: { autoplay: false }
     }).then(p => {
+      console.log("Player created successfully!");
       player = p;
 
+      // Gán sự kiện sau khi player đã chắc chắn tồn tại
       document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
-      // Dùng 'player.on()' để lắng nghe sự kiện
       player.on('play', () => {
         document.getElementById('togglePause').textContent = 'Pause';
         trackCurrentLine();
@@ -119,6 +123,12 @@
       player.on('pause', () => {
         document.getElementById('togglePause').textContent = 'Play';
       });
+      
+    }).catch(error => {
+      // BẮT LỖI: Xử lý khi không thể tạo player
+      console.error("Failed to create Dailymotion player:", error);
+      player = null; // Đảm bảo player là null nếu có lỗi
+      alert("LỖI: Không thể tải video. Vui lòng kiểm tra lại ID video, kết nối mạng hoặc tắt các trình chặn quảng cáo rồi thử lại.");
     });
   }
 
@@ -133,12 +143,11 @@
   });
   
   function trackCurrentLine() {
-    if (!player) return;
+    if (!player || player.paused) return;
 
-    // Lấy 'player.currentTime' và 'player.paused' trực tiếp
     const currentTime = player.currentTime;
-    
     let currentId = null;
+    
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
       if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
@@ -159,9 +168,7 @@
       }
     }
     
-    if (!player.paused) {
-      requestAnimationFrame(trackCurrentLine);
-    }
+    requestAnimationFrame(trackCurrentLine);
   }
 
   function parseTranscript(raw) {
@@ -208,7 +215,7 @@
   function loadVideoAndTranscript() {
     const videoId = document.getElementById('videoIdInput').value.trim();
     if (!videoId) {
-      alert("Please enter a Dailymotion Video ID.");
+      alert("Vui lòng nhập ID video Dailymotion.");
       return;
     }
     const rawEN = document.getElementById('scriptEN').value.trim();
@@ -268,8 +275,4 @@
     document.execCommand(cmd, false, value);
   }
 
-  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition, saveScripts, loadScriptFile
-  // từ file gốc của bạn vào đây nếu có.
-</script>
-</body>
-</html>
+  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition
