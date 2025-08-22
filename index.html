@@ -165,27 +165,20 @@
         // Listen for messages from the Dailymotion player iframe
         window.addEventListener('message', (event) => {
             if (event.origin !== "https://www.dailymotion.com") return;
-            
-            // [DEBUG] Log all messages from Dailymotion
-            console.log("Message received from Dailymotion:", event.data);
-
             try {
                 const data = JSON.parse(event.data);
                 if (data.id !== PLAYER_ID) return;
 
                 switch (data.event) {
                     case 'apiready':
-                        console.log("✅ Player event received: apiready");
                         isPlayerReady = true;
                         statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
                         while(playerMessageQueue.length > 0) {
                             const message = playerMessageQueue.shift();
-                            console.log("▶️ Processing queued message:", message);
                             postToPlayer(message, true);
                         }
                         break;
                     case 'play':
-                        console.log("▶️ Player event received: play");
                         statusEl.textContent = 'Video đang phát...';
                         break;
                     case 'timeupdate':
@@ -350,10 +343,13 @@
             player = document.createElement('iframe');
             player.id = PLAYER_ID;
             player.setAttribute('frameborder', '0');
-            player.setAttribute('allow', 'autoplay'); // Simplified allow attribute
+            player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            
+            // [FIX] Thêm tham số 'origin' để cho phép giao tiếp API
+            const origin = encodeURIComponent(window.location.origin);
+            player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}&origin=${origin}`;
+            
             playerContainer.appendChild(player);
-            // Set src after appending to ensure the listener is active
-            player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
 
             postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
             postToPlayer({ command: 'addEventListener', parameters: ['play'] });
@@ -362,11 +358,9 @@
         function postToPlayer(message, forceSend = false) {
             if (isPlayerReady || forceSend) {
                 if (player && player.contentWindow) {
-                    console.log("🔼 Sending message to player:", message);
                     player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
                 }
             } else {
-                console.log("▶️ Queuing message for player:", message);
                 playerMessageQueue.push(message);
             }
         }
