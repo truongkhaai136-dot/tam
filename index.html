@@ -1,328 +1,407 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Học Tiếng Anh (Dailymotion - Modern API)</title>
-    <style>
-        :root {
-            --primary-color: #0062ff;
-            --secondary-color: #f5f5f5;
-            --text-color: #333;
-            --highlight-color: #fffbe6;
-            --border-color: #ddd;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: var(--secondary-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px var(--shadow-color);
-        }
-        h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 25px;
-        }
-        .setup-section {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-bottom: 25px;
-            padding-bottom: 25px;
-            border-bottom: 2px solid var(--border-color);
-        }
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .input-group label {
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 1.1em;
-        }
-        .input-group input, .input-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 1em;
-            box-sizing: border-box;
-        }
-        .input-group textarea {
-            height: 150px;
-            resize: vertical;
-        }
-        .button-group {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        button, .file-input-label {
-            padding: 12px 25px;
-            font-size: 1.1em;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background-color: var(--primary-color);
-            color: white;
-        }
-        .file-input-label { background-color: #5cb85c; }
-        .main-content {
-            display: none;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-        }
-        .video-container {
-            position: sticky;
-            top: 20px;
-            align-self: flex-start;
-            width: 100%;
-            aspect-ratio: 16/9;
-            background-color: #000;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #player-iframe {
-            width: 100%;
-            height: 100%;
-        }
-        #transcript-container {
-            height: 80vh;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-        }
-        .transcript-line {
-            padding: 12px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; transition: background-color 0.3s;
-        }
-        .transcript-line:hover { background-color: #e6f0ff; }
-        .transcript-line.active .en-line {
-            background-color: var(--highlight-color); font-weight: bold; color: #c79100;
-        }
-        .en-line, .vi-line { padding: 8px; border-radius: 4px; position: relative; }
-        .vi-line { color: #555; font-style: italic; font-size: 0.95em; }
-    </style>
+<meta charset="utf-8"/>
+<title>Transcript (EN + VI) - Dailymotion</title>
+<style>
+    body { font-family: Arial, sans-serif; }
+    #player { margin-bottom: 15px; }
+    #transcript { max-width: 800px; margin: 0 auto; }
+    .line { padding: 8px; border-bottom: 1px solid #ccc; cursor: pointer; position: relative; }
+    .line:hover { background-color: #eef; }
+    .user { font-weight: bold; }
+    .machine { color: gray; margin-left: 10px; }
+    .line[contenteditable="true"] {
+      background-color: #ffffcc;
+      outline: 1px dashed #999;
+    }
+    .highlight {
+      background-color: #d1ecf1 !important;
+    }
+    .record-btn {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 5px;
+      font-size: 13px;
+    }
+    #toolbar {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 5px;
+      z-index: 1000;
+    }
+</style>
+<script src="https://api.dmcdn.net/all.js"></script>
 </head>
 <body>
+<div style="margin: 20px auto; max-width: 800px;">
+<label>🔗 Dailymotion Video ID: <input id="videoIdInput" style="width: 300px;" type="text" value=""/></label><br/><br/>
+<label>📝 English Transcript: <textarea id="scriptEN" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+<label>🇻🇳 Vietnamese Transcript: <textarea id="scriptVI" rows="6" style="width: 100%;"></textarea></label><br/><br/>
+<br/>
+<button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button><br/>
+<button onclick="saveScripts()">💾 Save Script</button>
+<br/><br/>
+<label>📂 Load Saved Script (.json): 
+  <input type="file" id="loadFileInput" accept=".json" onchange="loadScriptFile(event)">
+</label>
 
-<div class="container">
-    <h1>Công cụ Học Tiếng Anh qua Video</h1>
-    <div class="setup-section">
-        <div class="input-group">
-            <label for="video-id">1. Dán ID video Dailymotion vào đây:</label>
-            <input type="text" id="video-id" placeholder="ví dụ: x8f75h2">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="input-group">
-                <label for="en-script">2. Dán lời thoại tiếng Anh:</label>
-                <textarea id="en-script" placeholder="0:02&#10;If I could live in a place like this..."></textarea>
-            </div>
-            <div class="input-group">
-                <label for="vi-script">3. Dán lời thoại tiếng Việt:</label>
-                <textarea id="vi-script" placeholder="0:02&#10;Nếu mình có thể sống ở một nơi như thế này..."></textarea>
-            </div>
-        </div>
-        <div class="button-group">
-            <button id="load-btn">Tải Video và Lời thoại</button>
-            <label for="load-session-input" class="file-input-label">Mở Phiên làm việc (.json)</label>
-            <input type="file" id="load-session-input" accept=".json" style="display: none;">
-        </div>
-    </div>
-
-    <div class="main-content" id="main-content">
-        <div>
-            <div class="video-container">
-                <iframe id="player-iframe"
-                    frameborder="0"
-                    width="100%"
-                    height="100%"
-                    allowfullscreen
-                    allow="autoplay; fullscreen">
-                </iframe>
-            </div>
-            <div class="button-group" style="margin-top: 20px;">
-                 <button id="save-session-btn">Lưu Phiên làm việc (.json)</button>
-            </div>
-        </div>
-        <div id="transcript-container"></div>
-    </div>
 </div>
-
+<div id="player"></div>
+<h3>Transcript (EN + VI)</h3>
+<div id="toolbar">
+<button onclick="execCmd('bold')"><b>B</b></button>
+<button onclick="execCmd('italic')"><i>I</i></button>
+<button onclick="execCmd('underline')"><u>U</u></button>
+<input onchange="execCmd('foreColor', this.value)" type="color"/>
+</div>
+<div id="transcript"></div>
+<button id="togglePause" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  padding: 10px 15px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;">Pause</button>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    let playerFrame;
-    let transcriptData = [];
-    let currentLineIndex = -1;
-    let userScrolling = false;
-    let scrollTimeout;
+  let player;
+  let transcriptData = [];
 
-    const loadBtn = document.getElementById('load-btn');
-    const mainContent = document.getElementById('main-content');
-    const setupSection = document.querySelector('.setup-section');
-    const transcriptContainer = document.getElementById('transcript-container');
-    const videoIdInput = document.getElementById('video-id');
-    const enScriptInput = document.getElementById('en-script');
-    const viScriptInput = document.getElementById('vi-script');
-    const saveSessionBtn = document.getElementById('save-session-btn');
-    const loadSessionInput = document.getElementById('load-session-input');
+  let userScrolling = false;
+  let scrollTimeout = null;
 
-    loadBtn.addEventListener('click', initialize);
-
-    function initialize() {
-        const videoId = videoIdInput.value.trim();
-        const enScript = enScriptInput.value;
-        const viScript = viScriptInput.value;
-        if (!videoId || !enScript || !viScript) {
-            alert("Vui lòng nhập đủ ID Video và lời thoại.");
-            return;
-        }
-        parseAndCombineTranscripts(enScript, viScript);
-        if (transcriptData.length === 0) {
-            alert("Không thể phân tích lời thoại.");
-            return;
-        }
-        renderTranscript();
-        setupVideoPlayer(videoId);
-        setupSection.style.display = 'none';
-        mainContent.style.display = 'grid';
-    }
-
-    function setupVideoPlayer(videoId) {
-        playerFrame = document.getElementById('player-iframe');
-        playerFrame.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage`;
-    }
-
-    function postPlayerMessage(command, args = []) {
-        if (!playerFrame || !playerFrame.contentWindow) return;
-        const message = { command: command, parameters: args };
-        playerFrame.contentWindow.postMessage(JSON.stringify(message), 'https://www.dailymotion.com');
-    }
-
-    window.addEventListener('message', (event) => {
-        if (event.origin !== 'https://www.dailymotion.com') return;
-        try {
-            const data = new URLSearchParams(event.data);
-            const eventName = data.get('event');
-            if (eventName === 'apiready') {
-                postPlayerMessage('addEventListener', ['timeupdate']);
-            }
-            if (eventName === 'timeupdate') {
-                const currentTime = parseFloat(data.get('time'));
-                if (!isNaN(currentTime)) {
-                    handleTimeUpdate(currentTime);
-                }
-            }
-        } catch (e) { /* Bỏ qua các message không hợp lệ */ }
+  function setupPlayer(videoId) {
+    player = DM.player(document.getElementById('player'), {
+      video: videoId,
+      width: "640",
+      height: "360",
+      params: { autoplay: false }
     });
 
-    function handleTimeUpdate(currentTime) {
-        let newCurrentIndex = -1;
-        for (let i = transcriptData.length - 1; i >= 0; i--) {
-            if (currentTime >= transcriptData[i].time) {
-                newCurrentIndex = i;
-                break;
-            }
+    document.getElementById('togglePause').onclick = function () {
+      player.getPaused().then(paused => {
+        if (!paused) {
+          player.pause();
+          this.textContent = 'Play';
+        } else {
+          player.play();
+          this.textContent = 'Pause';
         }
-        if (newCurrentIndex !== currentLineIndex) {
-            highlightLine(newCurrentIndex);
-        }
-    }
+      });
+    };
 
-    function highlightLine(index) {
-        if (currentLineIndex !== -1) {
-            const oldLine = transcriptContainer.querySelector(`[data-index='${currentLineIndex}']`);
-            if (oldLine) oldLine.classList.remove('active');
-        }
-        currentLineIndex = index;
-        const newLine = transcriptContainer.querySelector(`[data-index='${currentLineIndex}']`);
-        if (newLine) {
-            newLine.classList.add('active');
-            if (!userScrolling) {
-                newLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    }
-
-    transcriptContainer.addEventListener('scroll', () => {
-        userScrolling = true;
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => { userScrolling = false; }, 3000);
+    player.addEventListener('play', () => {
+      trackCurrentLine();
     });
+  }
 
-    function addTranscriptEventListeners() {
-        transcriptContainer.querySelectorAll('.transcript-line').forEach(line => {
-            line.addEventListener('click', (e) => {
-                const time = parseFloat(line.dataset.time);
-                postPlayerMessage('seek', [time]);
-                postPlayerMessage('play');
-            });
+  function trackCurrentLine() {
+    player.currentTime.then(currentTime => {
+      let currentId = null;
+      for (let i = 0; i < transcriptData.length; i++) {
+        const line = transcriptData[i];
+        if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+          currentId = line.id;
+          break;
+        }
+      }
+      document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+      if (currentId && currentId.startsWith('en_')) {
+        const activeEl = document.getElementById(currentId);
+        if (activeEl) {
+          activeEl.classList.add('highlight');
+          if (!userScrolling) {
+            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+      player.getPaused().then(paused => {
+        if (!paused) requestAnimationFrame(trackCurrentLine);
+      });
+    });
+  }
+
+  function parseTranscript(raw) {
+    const lines = raw.trim().split('\n');
+    const parsed = [];
+    let currentTime = null, currentText = [];
+    for (const line of lines) {
+      const match = line.match(/^(\d+):(\d{2})$/);
+      if (match) {
+        if (currentTime !== null && currentText.length)
+          parsed.push({ time: currentTime, text: currentText.join('<br>') });
+        currentTime = parseInt(match[1]) * 60 + parseInt(match[2]);
+        currentText = [];
+      } else {
+        currentText.push(line.trim());
+      }
+    }
+    if (currentTime !== null && currentText.length)
+      parsed.push({ time: currentTime, text: currentText.join('<br>') });
+    return parsed;
+  }
+
+  function createLineCard(id, time, fallbackText, className) {
+    const div = document.createElement('div');
+    div.className = `line ${className}`;
+    div.dataset.time = time;
+    div.id = id;
+    div.innerHTML = fallbackText;
+    div.onclick = () => { if (player?.seek) player.seek(time); };
+
+    if (className === 'user') {
+      const btn = document.createElement('button');
+      btn.className = 'record-btn';
+      btn.textContent = '🎤';
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        startSpeechRecognition(div, fallbackText);
+      };
+      div.appendChild(btn);
+    }
+    return div;
+  }
+
+  function loadVideoAndTranscript() {
+    const videoId = document.getElementById('videoIdInput').value.trim();
+    const rawEN = document.getElementById('scriptEN').value.trim();
+    const rawVI = document.getElementById('scriptVI').value.trim();
+
+    setupPlayer(videoId);
+
+    const en = parseTranscript(rawEN);
+    const vi = parseTranscript(rawVI);
+    const transcript = document.getElementById('transcript');
+    transcript.innerHTML = '';
+    transcriptData = [];
+
+    for (let i = 0; i < Math.max(en.length, vi.length); i++) {
+      if (en[i]) {
+        const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
+        const div = createLineCard('en_' + i, en[i].time, text, 'user');
+        transcript.appendChild(div);
+        transcriptData.push({ id: 'en_' + i, time: en[i].time });
+      }
+      if (vi[i]) {
+        const text = `[VI] ${vi[i].text}`;
+        const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
+        transcript.appendChild(div);
+      }
+    }
+  }
+
+  document.getElementById('transcript').addEventListener('wheel', () => {
+    userScrolling = true;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => userScrolling = false, 9000);
+  });
+
+  document.addEventListener('dblclick', e => {
+    if (e.target.classList.contains('line')) {
+      e.target.contentEditable = true;
+      e.target.focus();
+    }
+  });
+
+  document.addEventListener('mouseup', e => {
+    const sel = window.getSelection();
+    if (sel.toString().length > 0) {
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      const toolbar = document.getElementById('toolbar');
+      toolbar.style.top = `${window.scrollY + rect.top - 40}px`; 
+      toolbar.style.left = `${window.scrollX + rect.left}px`; 
+      toolbar.style.display = 'block';
+    } else {
+      document.getElementById('toolbar').style.display = 'none';
+    }
+  });
+
+  function execCmd(cmd, value = null) {
+    document.execCommand(cmd, false, value);
+  }
+
+  // === giữ nguyên toàn bộ phần nhận diện giọng nói và save/load transcript như bản YouTube ===
+  function startSpeechRecognition(div, expectedText) {
+    const oldResult = div.querySelector('.result');
+    if (oldResult) oldResult.remove();
+    const oldPlayback = div.querySelector('.playback-container');
+    if (oldPlayback) oldPlayback.remove();
+      
+    if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
+      alert('Speech recognition or recording not supported in this browser');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            const mediaRecorder = new MediaRecorder(stream);
+            const audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const playbackContainer = document.createElement('div');
+                playbackContainer.className = 'playback-container';
+                
+                const listenButton = document.createElement('button');
+                listenButton.textContent = '▶️ Listen Again';
+                listenButton.style.marginTop = '5px';
+                listenButton.onclick = () => new Audio(audioUrl).play();
+                
+                playbackContainer.appendChild(listenButton);
+                div.appendChild(playbackContainer);
+            };
+            
+            mediaRecorder.start();
+
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onend = () => {
+                mediaRecorder.stop();
+                stream.getTracks().forEach(track => track.stop());
+            };
+            
+            recognition.onresult = function(event) {
+                const spokenText = event.results[0][0].transcript;
+                const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]/g, '').toLowerCase());
+                const resultEl = document.createElement('div');
+                resultEl.className = 'result';
+                resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
+                div.appendChild(resultEl);
+            };
+
+            recognition.onerror = function(event) {
+                alert('Error occurred in recognition: ' + event.error);
+                mediaRecorder.stop();
+            };
+
+            recognition.start();
+        })
+        .catch(err => {
+            alert('Could not access the microphone. Please grant permission.');
+            console.error("Error accessing microphone:", err);
         });
+  }
+
+  function similarity(s1, s2) {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    const longerLength = longer.length;
+    if (longerLength === 0) return 1.0;
+    return (longerLength - editDistance(longer, shorter)) / longerLength;
+  }
+
+  function editDistance(s1, s2) {
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+    const costs = [];
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i === 0)
+          costs[j] = j;
+        else if (j > 0) {
+          let newValue = costs[j - 1];
+          if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+          costs[j - 1] = lastValue;
+          lastValue = newValue;
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue;
+    }
+    return costs[s2.length];
+  }
+
+  function saveScripts() {
+    const videoId = document.getElementById('videoIdInput').value.trim();
+    const lines = document.querySelectorAll('.line');
+    const enChunks = [];
+    const viChunks = [];
+
+    for (const line of lines) {
+        const time = parseInt(line.dataset.time || '0');
+        const minutes = Math.floor(time / 60);
+        const seconds = (time % 60).toString().padStart(2, '0');
+
+        let content = line.innerHTML
+            .replace(/<button[^>]*>.*?<\/button>/g, '')
+            .replace(/<div class="result">.*?<\/div>/g, '')
+            .replace(/<div class="playback-container">.*?<\/div>/g, '')
+            .replace(/<br\s*\/?>(?=\s*<)/gi, '')
+            .replace(/<br\s*\/?>(?!\s*<)/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\n{2,}/g, '\n')
+            .trim();
+
+        let block;
+
+        if (line.classList.contains('user')) {
+            const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
+            block = `${minutes}:${seconds}\n${cleanContent}`;
+            enChunks.push(block);
+        } else if (line.classList.contains('machine')) {
+            const cleanContent = content.replace(/^\[VI\]\s*/, '');
+            block = `${minutes}:${seconds}\n${cleanContent}`;
+            viChunks.push(block);
+        }
     }
 
-    function timeToSeconds(timeStr) {
-        const parts = timeStr.split(':').map(Number);
-        if (parts.length === 2) return parts[0] * 60 + parts[1];
-        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-        return 0;
-    }
+    const blob = new Blob([JSON.stringify({
+        videoId,
+        enText: enChunks.join('\n\n'),
+        viText: viChunks.join('\n\n')
+    }, null, 2)], { type: 'application/json' });
 
-    function parseTranscript(script) {
-        const lines = script.trim().split(/\r?\n/);
-        const data = {};
-        let currentTime = -1;
-        const timeRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)/;
-        lines.forEach(line => {
-            line = line.trim();
-            const timeMatch = line.match(timeRegex);
-            if (timeMatch) {
-                currentTime = timeToSeconds(timeMatch[1]);
-                line = line.replace(timeRegex, '').trim();
-            }
-            if (currentTime !== -1 && line) {
-                if (!data[currentTime]) data[currentTime] = "";
-                data[currentTime] += (data[currentTime] ? " " : "") + line;
-            }
-        });
-        return data;
-    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript_${videoId || 'video'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
-    function parseAndCombineTranscripts(enScript, viScript) {
-        const enData = parseTranscript(enScript);
-        const viData = parseTranscript(viScript);
-        const allTimestamps = [...new Set([...Object.keys(enData), ...Object.keys(viData)])].sort((a, b) => a - b);
-        transcriptData = allTimestamps.map(time => ({ time: parseFloat(time), en: enData[time] || "", vi: viData[time] || "" }));
-    }
+  function loadScriptFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-    function renderTranscript() {
-        transcriptContainer.innerHTML = '';
-        transcriptData.forEach((line, index) => {
-            const lineEl = document.createElement('div');
-            lineEl.className = 'transcript-line';
-            lineEl.dataset.time = line.time;
-            lineEl.dataset.index = index;
-            lineEl.innerHTML = `<div class="en-line">${line.en}</div><div class="vi-line">${line.vi}</div>`;
-            transcriptContainer.appendChild(lineEl);
-        });
-        addTranscriptEventListeners();
-    }
-});
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        document.getElementById('videoIdInput').value = data.videoId || '';
+        document.getElementById('scriptEN').value = data.enText || '';
+        document.getElementById('scriptVI').value = data.viText || '';
+      } catch (err) {
+        alert('Invalid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  }
 </script>
-
 </body>
 </html>
