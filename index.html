@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Học Tiếng Anh (Dailymotion - Stable)</title>
+    <title>Công cụ Học Tiếng Anh (Dailymotion - Modern API)</title>
     <style>
         :root {
             --primary-color: #0062ff;
@@ -61,16 +61,10 @@
             border-radius: 8px;
             font-size: 1em;
             box-sizing: border-box;
-            transition: border-color 0.3s, box-shadow 0.3s;
         }
         .input-group textarea {
             height: 150px;
             resize: vertical;
-        }
-        .input-group input:focus, .input-group textarea:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 5px rgba(0, 98, 255, 0.5);
         }
         .button-group {
             display: flex;
@@ -86,14 +80,8 @@
             cursor: pointer;
             background-color: var(--primary-color);
             color: white;
-            transition: background-color 0.3s, transform 0.2s;
-        }
-        button:hover, .file-input-label:hover {
-            background-color: #0051d6;
-            transform: translateY(-2px);
         }
         .file-input-label { background-color: #5cb85c; }
-        .file-input-label:hover { background-color: #4cae4c; }
         .main-content {
             display: none;
             grid-template-columns: 1fr 1fr;
@@ -109,7 +97,7 @@
             border-radius: 8px;
             overflow: hidden;
         }
-        #player {
+        #player-iframe {
             width: 100%;
             height: 100%;
         }
@@ -129,26 +117,12 @@
         }
         .en-line, .vi-line { padding: 8px; border-radius: 4px; position: relative; }
         .vi-line { color: #555; font-style: italic; font-size: 0.95em; }
-        [contenteditable="true"] { outline: 2px dashed var(--primary-color); background-color: #fff; }
-        /* Các style khác giữ nguyên */
-        #format-toolbar { position: absolute; display: none; background: #333; color: white; border-radius: 6px; padding: 5px; z-index: 1000; }
-        #format-toolbar button { background: none; border: none; color: white; padding: 8px; font-size: 1em; min-width: 40px; }
-        #format-toolbar button:hover { background: #555; }
-        input[type="color"] { border: none; background: none; width: 25px; height: 25px; padding: 0; cursor: pointer; vertical-align: middle; }
-        .record-section { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        .record-btn { background: none; border: none; cursor: pointer; font-size: 1.5em; padding: 5px; }
-        .record-btn.recording { color: red; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
-        .result-section { font-size: 0.9em; margin-left: 10px; }
-        .listen-again-btn { background-color: #f0ad4e; color: white; padding: 5px 10px; font-size: 0.9em; margin-left: 10px; }
-        .listen-again-btn:hover { background-color: #ec971f; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Công cụ Học Tiếng Anh qua Video (Dailymotion Stable)</h1>
-
+    <h1>Công cụ Học Tiếng Anh qua Video</h1>
     <div class="setup-section">
         <div class="input-group">
             <label for="video-id">1. Dán ID video Dailymotion vào đây:</label>
@@ -174,7 +148,13 @@
     <div class="main-content" id="main-content">
         <div>
             <div class="video-container">
-                <div id="player"></div>
+                <iframe id="player-iframe"
+                    frameborder="0"
+                    width="100%"
+                    height="100%"
+                    allowfullscreen
+                    allow="autoplay; fullscreen">
+                </iframe>
             </div>
             <div class="button-group" style="margin-top: 20px;">
                  <button id="save-session-btn">Lưu Phiên làm việc (.json)</button>
@@ -184,25 +164,14 @@
     </div>
 </div>
 
-<div id="format-toolbar">
-    <button data-command="bold"><b>B</b></button>
-    <button data-command="italic"><i>I</i></button>
-    <button data-command="underline"><u>U</u></button>
-    <input type="color" id="font-color-picker" title="Chọn màu chữ">
-</div>
-
-<script src="https://api.dmcdn.net/all.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // State variables
-    let player;
-    let timeUpdateInterval;
+    let playerFrame;
     let transcriptData = [];
     let currentLineIndex = -1;
     let userScrolling = false;
     let scrollTimeout;
 
-    // DOM Elements
     const loadBtn = document.getElementById('load-btn');
     const mainContent = document.getElementById('main-content');
     const setupSection = document.querySelector('.setup-section');
@@ -210,72 +179,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoIdInput = document.getElementById('video-id');
     const enScriptInput = document.getElementById('en-script');
     const viScriptInput = document.getElementById('vi-script');
-    // ... (các element khác)
+    const saveSessionBtn = document.getElementById('save-session-btn');
+    const loadSessionInput = document.getElementById('load-session-input');
+
+    loadBtn.addEventListener('click', initialize);
 
     function initialize() {
         const videoId = videoIdInput.value.trim();
-        // ... (phần kiểm tra input giữ nguyên)
-        if (!videoId || !enScriptInput.value || !viScriptInput.value) {
+        const enScript = enScriptInput.value;
+        const viScript = viScriptInput.value;
+        if (!videoId || !enScript || !viScript) {
             alert("Vui lòng nhập đủ ID Video và lời thoại.");
             return;
         }
-
-        parseAndCombineTranscripts(enScriptInput.value, viScriptInput.value);
+        parseAndCombineTranscripts(enScript, viScript);
         if (transcriptData.length === 0) {
             alert("Không thể phân tích lời thoại.");
             return;
         }
-        
         renderTranscript();
         setupVideoPlayer(videoId);
-
         setupSection.style.display = 'none';
         mainContent.style.display = 'grid';
     }
 
-    // *** LOGIC PLAYER HOÀN TOÀN MỚI ***
     function setupVideoPlayer(videoId) {
-        if(player) {
-            player.load(videoId);
-            return;
-        }
-        player = DM.player(document.getElementById('player'), {
-            video: videoId,
-            width: '100%',
-            height: '100%',
-            params: {
-                autoplay: false,
-                mute: false
-            }
-        });
-
-        player.addEventListener('play', () => {
-            console.log("Player playing. Starting time polling.");
-            // Xóa interval cũ nếu có
-            clearInterval(timeUpdateInterval);
-            // Bắt đầu kiểm tra thời gian 4 lần/giây
-            timeUpdateInterval = setInterval(() => {
-                // player.currentTime là một thuộc tính của API cũ,
-                // cho phép chúng ta lấy thời gian hiện tại một cách trực tiếp.
-                handleTimeUpdate(player.currentTime);
-            }, 250);
-        });
-
-        player.addEventListener('pause', () => {
-            console.log("Player paused. Stopping time polling.");
-            // Dừng kiểm tra khi video tạm dừng để tiết kiệm tài nguyên
-            clearInterval(timeUpdateInterval);
-        });
-
-        player.addEventListener('end', () => {
-            console.log("Player ended. Stopping time polling.");
-            clearInterval(timeUpdateInterval);
-        });
+        playerFrame = document.getElementById('player-iframe');
+        playerFrame.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage`;
     }
 
-    function handleTimeUpdate(currentTime) {
-        if (isNaN(currentTime)) return;
+    function postPlayerMessage(command, args = []) {
+        if (!playerFrame || !playerFrame.contentWindow) return;
+        const message = { command: command, parameters: args };
+        playerFrame.contentWindow.postMessage(JSON.stringify(message), 'https://www.dailymotion.com');
+    }
 
+    window.addEventListener('message', (event) => {
+        if (event.origin !== 'https://www.dailymotion.com') return;
+        try {
+            const data = new URLSearchParams(event.data);
+            const eventName = data.get('event');
+            if (eventName === 'apiready') {
+                postPlayerMessage('addEventListener', ['timeupdate']);
+            }
+            if (eventName === 'timeupdate') {
+                const currentTime = parseFloat(data.get('time'));
+                if (!isNaN(currentTime)) {
+                    handleTimeUpdate(currentTime);
+                }
+            }
+        } catch (e) { /* Bỏ qua các message không hợp lệ */ }
+    });
+
+    function handleTimeUpdate(currentTime) {
         let newCurrentIndex = -1;
         for (let i = transcriptData.length - 1; i >= 0; i--) {
             if (currentTime >= transcriptData[i].time) {
@@ -287,9 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
             highlightLine(newCurrentIndex);
         }
     }
-    
-    // --- Các hàm khác giữ nguyên không thay đổi ---
-    loadBtn.addEventListener('click', initialize);
 
     function highlightLine(index) {
         if (currentLineIndex !== -1) {
@@ -305,52 +258,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
+
+    transcriptContainer.addEventListener('scroll', () => {
+        userScrolling = true;
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => { userScrolling = false; }, 3000);
+    });
+
     function addTranscriptEventListeners() {
         transcriptContainer.querySelectorAll('.transcript-line').forEach(line => {
             line.addEventListener('click', (e) => {
-                if (!e.target.closest('.record-section')) {
-                    const time = parseFloat(line.dataset.time);
-                    if (player && typeof player.seek === 'function') {
-                        player.seek(time);
-                        player.play();
-                    }
-                }
+                const time = parseFloat(line.dataset.time);
+                postPlayerMessage('seek', [time]);
+                postPlayerMessage('play');
             });
-            // ... (event listeners cho chỉnh sửa và ghi âm giữ nguyên)
-            const enLine = line.querySelector('.en-line'), viLine = line.querySelector('.vi-line');
-            [enLine, viLine].forEach(editableLine => {
-                editableLine.addEventListener('dblclick', () => { editableLine.contentEditable = true; editableLine.focus(); });
-                editableLine.addEventListener('blur', () => {
-                    editableLine.contentEditable = false;
-                    const index = parseInt(line.dataset.index), type = editableLine.classList.contains('en-line') ? 'en' : 'vi';
-                    transcriptData[index][type] = editableLine.innerHTML;
-                });
-            });
-            const recordBtn = line.querySelector('.record-btn');
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recordBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleRecording(e.target, enLine.textContent, line.querySelector('.result-section'));
-                });
-            } else { recordBtn.disabled = true; recordBtn.title = "Trình duyệt không hỗ trợ."; }
         });
-    }
-
-    // --- Các hàm helper, parser, speech recognition... copy từ phiên bản trước ---
-    const saveSessionBtn = document.getElementById('save-session-btn');
-    const loadSessionInput = document.getElementById('load-session-input');
-    const formatToolbar = document.getElementById('format-toolbar');
-    const colorPicker = document.getElementById('font-color-picker');
-    let recognition;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
     }
 
     function timeToSeconds(timeStr) {
@@ -359,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
         return 0;
     }
+
     function parseTranscript(script) {
         const lines = script.trim().split(/\r?\n/);
         const data = {};
@@ -378,12 +301,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return data;
     }
+
     function parseAndCombineTranscripts(enScript, viScript) {
         const enData = parseTranscript(enScript);
         const viData = parseTranscript(viScript);
         const allTimestamps = [...new Set([...Object.keys(enData), ...Object.keys(viData)])].sort((a, b) => a - b);
         transcriptData = allTimestamps.map(time => ({ time: parseFloat(time), en: enData[time] || "", vi: viData[time] || "" }));
     }
+
     function renderTranscript() {
         transcriptContainer.innerHTML = '';
         transcriptData.forEach((line, index) => {
@@ -391,29 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
             lineEl.className = 'transcript-line';
             lineEl.dataset.time = line.time;
             lineEl.dataset.index = index;
-            lineEl.innerHTML = `<div class="en-line">${line.en}</div><div class="vi-line">${line.vi}</div><div class="record-section"><button class="record-btn" title="Ghi âm">🎤</button><div class="result-section"></div></div>`;
+            lineEl.innerHTML = `<div class="en-line">${line.en}</div><div class="vi-line">${line.vi}</div>`;
             transcriptContainer.appendChild(lineEl);
         });
         addTranscriptEventListeners();
     }
-    transcriptContainer.addEventListener('scroll', () => {
-        userScrolling = true;
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => { userScrolling = false; }, 3000);
-    });
-    transcriptContainer.addEventListener('mouseup', showFormatToolbar);
-    transcriptContainer.addEventListener('keyup', showFormatToolbar);
-    function showFormatToolbar(){const selection=window.getSelection();if(!selection.isCollapsed){const range=selection.getRangeAt(0);const rect=range.getBoundingClientRect();formatToolbar.style.display='block';formatToolbar.style.left=`${rect.left+window.scrollX+rect.width/2-formatToolbar.offsetWidth/2}px`;formatToolbar.style.top=`${rect.top+window.scrollY-formatToolbar.offsetHeight-5}px`;}else{formatToolbar.style.display='none';}}
-    document.addEventListener('mousedown',(e)=>{if(!formatToolbar.contains(e.target)&&!isSelectionInEditable()){formatToolbar.style.display='none';}});
-    function isSelectionInEditable(){const selection=window.getSelection();if(selection.rangeCount===0)return false;let container=selection.getRangeAt(0).commonAncestorContainer;while(container){if(container.nodeType===1&&container.isContentEditable)return true;container=container.parentNode;}return false;}
-    formatToolbar.addEventListener('click',(e)=>{if(e.target.dataset.command){e.preventDefault();document.execCommand(e.target.dataset.command,false,null);}});
-    colorPicker.addEventListener('input',(e)=>{document.execCommand('foreColor',false,e.target.value);});
-    let recordedAudioBlob = null;
-    async function handleRecording(button,originalText,resultContainer){if(button.classList.contains('recording')){recognition.stop();return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const mediaRecorder=new MediaRecorder(stream);const audioChunks=[];mediaRecorder.addEventListener("dataavailable",e=>{audioChunks.push(e.data);});mediaRecorder.addEventListener("stop",()=>{recordedAudioBlob=new Blob(audioChunks,{type:'audio/wav'});stream.getTracks().forEach(track=>track.stop());});mediaRecorder.start();recognition.onstart=()=>{button.classList.add('recording');button.textContent='🛑';resultContainer.innerHTML="Đang nghe...";};recognition.onresult=(event)=>{const recognizedText=event.results[0][0].transcript;const score=calculateSimilarity(originalText,recognizedText);resultContainer.innerHTML=`<p><strong>Bạn nói:</strong> ${recognizedText}</p><p><strong>Điểm chính xác:</strong> ${score.toFixed(2)}%</p>`;if(recordedAudioBlob){const listenBtn=document.createElement('button');listenBtn.textContent='Nghe lại';listenBtn.className='listen-again-btn';listenBtn.onclick=()=>{new Audio(URL.createObjectURL(recordedAudioBlob)).play();};resultContainer.appendChild(listenBtn);}};recognition.onend=()=>{mediaRecorder.stop();button.classList.remove('recording');button.textContent='🎤';if(resultContainer.innerHTML==="Đang nghe...")resultContainer.innerHTML="Không nhận dạng được.";};recognition.onerror=(e)=>{resultContainer.innerHTML=`Lỗi: ${e.error}`;};recognition.start();}catch(err){alert("Không thể truy cập micro.");}}
-    function calculateSimilarity(s1,s2){s1=s1.toLowerCase().trim();s2=s2.toLowerCase().trim();let longer=s1,shorter=s2;if(s1.length<s2.length){longer=s2;shorter=s1;}const longerLength=longer.length;if(longerLength===0)return 100.0;return(longerLength-levenshteinDistance(longer,shorter))/parseFloat(longerLength)*100;}
-    function levenshteinDistance(s1,s2){const costs=[];for(let i=0;i<=s1.length;i++){let lastValue=i;for(let j=0;j<=s2.length;j++){if(i===0)costs[j]=j;else if(j>0){let newValue=costs[j-1];if(s1.charAt(i-1)!==s2.charAt(j-1))newValue=Math.min(Math.min(newValue,lastValue),costs[j])+1;costs[j-1]=lastValue;lastValue=newValue;}}if(i>0)costs[s2.length]=lastValue;}return costs[s2.length];}
-    saveSessionBtn.addEventListener('click',()=>{transcriptContainer.querySelectorAll('.transcript-line').forEach((lineEl,index)=>{transcriptData[index].en=lineEl.querySelector('.en-line').innerHTML;transcriptData[index].vi=lineEl.querySelector('.vi-line').innerHTML;});const sessionData={videoId:videoIdInput.value,transcripts:transcriptData};const dataStr=JSON.stringify(sessionData,null,2);const dataBlob=new Blob([dataStr],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(dataBlob);a.download=`session_${sessionData.videoId}_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);});
-    loadSessionInput.addEventListener('change',(event)=>{const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(e)=>{try{const sessionData=JSON.parse(e.target.result);videoIdInput.value=sessionData.videoId;transcriptData=sessionData.transcripts;enScriptInput.value=transcriptData.map(l=>`${new Date(l.time*1000).toISOString().substr(14,5)}\n${l.en.replace(/<[^>]*>?/gm,'')}`).join('\n\n');viScriptInput.value=transcriptData.map(l=>`${new Date(l.time*1000).toISOString().substr(14,5)}\n${l.vi.replace(/<[^>]*>?/gm,'')}`).join('\n\n');renderTranscript();setupVideoPlayer(sessionData.videoId);setupSection.style.display='none';mainContent.style.display='grid';}catch(error){alert("Tệp tin không hợp lệ.");}};reader.readAsText(file);loadSessionInput.value='';});
 });
 </script>
 
