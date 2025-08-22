@@ -383,37 +383,48 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function setupVideoPlayer(videoId) {
         playerFrame = document.getElementById('player-iframe');
+        // Logic `onload` đã bị xóa khỏi đây vì nó không đáng tin cậy.
         playerFrame.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&autoplay=0`;
-
-        // *** THAY ĐỔI QUAN TRỌNG Ở ĐÂY ***
-        // Chờ cho iframe load xong, sau đó gửi yêu cầu "lắng nghe" sự kiện timeupdate.
-        playerFrame.onload = () => {
-            postPlayerMessage('addEventListener', ['timeupdate']);
-        };
     }
     
     function postPlayerMessage(command, args = []) {
         if (!playerFrame || !playerFrame.contentWindow) return;
-        playerFrame.contentWindow.postMessage(JSON.stringify({ command: command, parameters: args }), 'https://www.dailymotion.com');
+        const message = { command: command, parameters: args };
+        // Dailymotion API mong đợi một chuỗi JSON
+        playerFrame.contentWindow.postMessage(JSON.stringify(message), 'https://www.dailymotion.com');
     }
 
+    // Lắng nghe tất cả sự kiện từ Dailymotion Player
     window.addEventListener('message', (event) => {
+        // Luôn kiểm tra nguồn gốc để đảm bảo an toàn
         if (event.origin !== 'https://www.dailymotion.com') {
             return;
         }
+
         try {
-            // Dailymotion gửi dữ liệu dưới dạng string, không phải JSON object
+            // Dailymotion gửi dữ liệu sự kiện dưới dạng chuỗi query string
             const data = new URLSearchParams(event.data);
             const eventName = data.get('event');
+
+            // *** THAY ĐỔI QUAN TRỌNG NHẤT NẰM Ở ĐÂY ***
+            // 1. Đợi tín hiệu 'apiready' từ trình phát
+            if (eventName === 'apiready') {
+                console.log('Dailymotion player is ready. Subscribing to timeupdate.');
+                // 2. Khi trình phát đã sẵn sàng, GỬI yêu cầu lắng nghe 'timeupdate'
+                postPlayerMessage('addEventListener', ['timeupdate']);
+            }
             
+            // 3. Bây giờ, chúng ta sẽ bắt đầu nhận được sự kiện 'timeupdate'
             if (eventName === 'timeupdate') {
                 const currentTime = parseFloat(data.get('time'));
                 if (!isNaN(currentTime)) {
+                    // Thêm log để kiểm tra
+                    // console.log('Time update received:', currentTime); 
                     handleTimeUpdate(currentTime);
                 }
             }
         } catch (e) {
-            console.error("Error parsing message from Dailymotion:", e);
+            // Bỏ qua các tin nhắn không phải định dạng query string
         }
     });
     
