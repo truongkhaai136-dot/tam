@@ -96,10 +96,15 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  async function trackCurrentLine() {
+  // ==========================================================
+  // HÀM ĐÃ SỬA LỖI
+  // ==========================================================
+  function trackCurrentLine() {
     if (!player || !isPlaying) return;
 
-    const currentTime = await player.getCurrentTime();
+    // SỬA LỖI: Sử dụng thuộc tính 'player.currentTime' thay vì hàm 'player.getCurrentTime()'
+    const currentTime = player.currentTime; 
+
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
@@ -110,9 +115,7 @@
     }
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
     
-    // === PHẦN ĐÃ SỬA ===
     if (currentId) {
-        // Nếu dòng hiện tại là tiếng Việt, hãy đổi nó thành ID tiếng Anh tương ứng để tô sáng và cuộn
         let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
         
         const activeEl = document.getElementById(highlightId);
@@ -123,7 +126,6 @@
             }
         }
     }
-    // === KẾT THÚC PHẦN SỬA ===
 
     if (isPlaying) {
       requestAnimationFrame(() => trackCurrentLine());
@@ -234,7 +236,6 @@
     transcript.innerHTML = '';
     transcriptData = [];
 
-    // === PHẦN ĐÃ SỬA ===
     for (let i = 0; i < Math.max(en.length, vi.length); i++) {
       if (en[i]) {
         const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
@@ -246,14 +247,11 @@
         const text = `[VI] ${vi[i].text}`;
         const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
         transcript.appendChild(div);
-        // Thêm cả thời gian của phụ đề tiếng Việt
         transcriptData.push({ id: 'vi_' + i, time: vi[i].time });
       }
     }
     
-    // Sắp xếp lại mảng theo thứ tự thời gian
     transcriptData.sort((a, b) => a.time - b.time);
-    // === KẾT THÚC PHẦN SỬA ===
   }
 
 document.getElementById('transcript').addEventListener('wheel', () => {
