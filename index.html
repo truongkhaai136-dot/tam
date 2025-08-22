@@ -55,7 +55,7 @@
   <button onclick="loadVideoAndTranscript()">▶️ Load Video + Transcript</button><br/>
   <button onclick="saveScripts()">💾 Save Script</button>
   <br/><br/>
-  <label>📂 Load Saved Script (.json): 
+  <label>📂 Load Saved Script (.json):
     <input type="file" id="loadFileInput" accept=".json" onchange="loadScriptFile(event)">
   </label>
 </div>
@@ -88,7 +88,7 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
-  // **ĐÃ SỬA LỖI** - Sử dụng player.play() và player.pause()
+  // Sửa lỗi - Sử dụng player.play() và player.pause()
   function toggleVideoPlayback() {
     if (player && typeof player.pause === 'function' && typeof player.play === 'function') {
       if (player.paused) {
@@ -117,6 +117,10 @@
       console.log("Player created successfully!");
       player = p;
 
+      // **BẢN SỬA MỚI NHẤT**
+      // Cập nhật trạng thái nút bấm thành "Play" ngay khi video được tải
+      document.getElementById('togglePause').textContent = 'Play';
+
       document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
       player.on('play', () => {
@@ -135,7 +139,7 @@
     });
   }
 
-  // **TÍNH NĂNG MỚI** - Dừng/phát video bằng phím Space
+  // Tính năng mới - Dừng/phát video bằng phím Space
   document.addEventListener('keydown', (event) => {
     const activeElement = document.activeElement;
     const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName);
@@ -278,8 +282,6 @@
     document.execCommand(cmd, false, value);
   }
 
-  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition và các hàm lưu/tải file nếu cần
-  // Ví dụ hàm saveScripts và loadScriptFile (cần được hoàn thiện)
   function saveScripts() {
     alert("Chức năng Save Script cần được cài đặt!");
   }
