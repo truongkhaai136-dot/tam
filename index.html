@@ -167,7 +167,7 @@
             if (event.origin !== "https://www.dailymotion.com") return;
             
             // [DEBUG] Log all messages from Dailymotion
-            // console.log("Message received from Dailymotion:", event.data);
+            console.log("Message received from Dailymotion:", event.data);
 
             try {
                 const data = JSON.parse(event.data);
@@ -349,10 +349,10 @@
         function setupPlayer(videoId) {
             player = document.createElement('iframe');
             player.id = PLAYER_ID;
-            // [FIX] Đặt src SAU KHI đã thêm vào DOM để đảm bảo listener luôn sẵn sàng
             player.setAttribute('frameborder', '0');
-            player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            player.setAttribute('allow', 'autoplay'); // Simplified allow attribute
             playerContainer.appendChild(player);
+            // Set src after appending to ensure the listener is active
             player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
 
             postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
