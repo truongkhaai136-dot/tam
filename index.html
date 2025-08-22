@@ -87,19 +87,11 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
-  // --- HÀM ĐÃ SỬA ---
+  // --- HÀM CUỐI CÙNG, ĐÁNG TIN CẬY NHẤT ---
   function toggleVideoPlayback() {
     if (!player) return;
-    const toggleButton = document.getElementById('togglePause');
-    
-    // SỬA: Dùng thuộc tính 'player.paused' thay vì 'player.getPaused()'
-    if (player.paused) {
-      player.play();
-      toggleButton.textContent = 'Pause';
-    } else {
-      player.pause();
-      toggleButton.textContent = 'Play';
-    }
+    // Sử dụng hàm togglePlay() gốc của Dailymotion để đảm bảo hoạt động chính xác
+    player.togglePlay();
   }
 
   function setupPlayer(videoId) {
@@ -118,7 +110,7 @@
 
       document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
-      // SỬA: Dùng 'player.on()' thay vì 'player.addEventListener()'
+      // Dùng 'player.on()' để lắng nghe sự kiện
       player.on('play', () => {
         document.getElementById('togglePause').textContent = 'Pause';
         trackCurrentLine();
@@ -140,11 +132,10 @@
     }
   });
   
-  // --- HÀM ĐÃ SỬA ---
   function trackCurrentLine() {
     if (!player) return;
 
-    // SỬA: Lấy 'player.currentTime' và 'player.paused' trực tiếp
+    // Lấy 'player.currentTime' và 'player.paused' trực tiếp
     const currentTime = player.currentTime;
     
     let currentId = null;
