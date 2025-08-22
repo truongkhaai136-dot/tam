@@ -96,21 +96,14 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  // ==========================================================
-  // HÀM ĐÃ SỬA LỖI CUỐI CÙNG
-  // ==========================================================
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
-    
     const currentTime = player.currentTime;
-
-    // THÊM ĐIỀU KIỆN KIỂM TRA: Chỉ chạy tiếp khi currentTime là một con số hợp lệ
     if (typeof currentTime !== 'number') {
-      // Nếu chưa hợp lệ, đợi khung hình tiếp theo rồi thử lại
       if (isPlaying) {
         requestAnimationFrame(trackCurrentLine);
       }
-      return; 
+      return;
     }
 
     let currentId = null;
@@ -121,9 +114,13 @@
         break;
       }
     }
+    
+    // DEBUG: Kiểm tra xem có tìm thấy ID không
+    if (!currentId) {
+        console.warn(`🤷‍♂️ No matching script line found for time: ${currentTime.toFixed(2)}s`);
+    }
 
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
-    
     if (currentId) {
       let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
       const activeEl = document.getElementById(highlightId);
@@ -251,6 +248,9 @@
       }
     }
     transcriptData.sort((a, b) => a.time - b.time);
+    
+    // DEBUG: Kiểm tra dữ liệu transcript sau khi đã load và sắp xếp
+    console.log("📊 Transcript data loaded and sorted:", transcriptData);
   }
 
   document.getElementById('transcript').addEventListener('wheel', () => {
