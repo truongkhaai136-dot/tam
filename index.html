@@ -14,6 +14,7 @@
             background-color: #fef9c3; /* yellow-100 */
             color: #713f12; /* yellow-900 */
             font-weight: bold;
+            transition: background-color 0.3s ease-in-out;
         }
         .subtitle-container {
             height: calc(100vh - 450px);
@@ -123,12 +124,12 @@
         const editorToolbar = document.getElementById('editor-toolbar');
 
         // App State
-        let player; // This will now be the iframe element
+        let player;
         let isPlayerReady = false;
         let subtitles = [];
         let userScrolling = false;
         let scrollTimeout;
-        const PLAYER_ID = 'dm-player'; // ID for the iframe
+        const PLAYER_ID = 'dm-player';
 
         // Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -160,7 +161,7 @@
             }, 2000);
         });
 
-        // Listen for messages from the Dailymotion player iframe
+        // [FIXED] Listen for messages from the Dailymotion player iframe
         window.addEventListener('message', (event) => {
             if (event.origin !== "https://www.dailymotion.com") return;
             try {
@@ -171,15 +172,24 @@
                     case 'apiready':
                         isPlayerReady = true;
                         statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                        // Yêu cầu player gửi sự kiện timeupdate
-                        postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
+                        // [FIX] Thêm độ trễ nhỏ để đảm bảo player sẵn sàng nhận lệnh
+                        setTimeout(() => {
+                            postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
+                            postToPlayer({ command: 'addEventListener', parameters: ['play'] });
+                        }, 150);
+                        break;
+                    case 'play':
+                        statusEl.textContent = 'Video đang phát...';
                         break;
                     case 'timeupdate':
-                        handleTimeUpdate(data.time);
+                        const currentTime = data.time || (data.parameters && data.parameters.time);
+                        if (typeof currentTime !== 'undefined') {
+                            handleTimeUpdate(currentTime);
+                        }
                         break;
                 }
             } catch (error) {
-                // console.warn('Could not parse message from Dailymotion:', event.data);
+                // Ignore non-JSON messages
             }
         });
 
@@ -329,7 +339,6 @@
             });
         }
 
-        // [UPDATED] Use iframe embed method
         function setupPlayer(videoId) {
             player = document.createElement('iframe');
             player.id = PLAYER_ID;
@@ -340,7 +349,6 @@
             playerContainer.appendChild(player);
         }
 
-        // Helper function to send commands to the player
         function postToPlayer(message) {
             if (player && player.contentWindow) {
                 player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
@@ -348,7 +356,6 @@
         }
         
         let lastHighlightedId = null;
-        // [UPDATED] handleTimeUpdate now receives time directly
         function handleTimeUpdate(currentTime) {
             if (userScrolling) return;
 
