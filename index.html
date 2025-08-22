@@ -98,9 +98,7 @@
 
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
-
-    const currentTime = player.currentTime; 
-
+    const currentTime = player.currentTime;
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
@@ -110,19 +108,16 @@
       }
     }
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
-    
     if (currentId) {
-        let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
-        
-        const activeEl = document.getElementById(highlightId);
-        if (activeEl) {
-            activeEl.classList.add('highlight');
-            if (!userScrolling) {
-                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+      let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
+      const activeEl = document.getElementById(highlightId);
+      if (activeEl) {
+        activeEl.classList.add('highlight');
+        if (!userScrolling) {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+      }
     }
-
     if (isPlaying) {
       requestAnimationFrame(() => trackCurrentLine());
     }
@@ -155,7 +150,6 @@
     div.id = id;
     div.innerHTML = fallbackText;
     div.onclick = () => { if (player?.seek) player.seek(time); };
-
     if (className === 'user') {
       const btn = document.createElement('button');
       btn.className = 'record-btn';
@@ -172,12 +166,11 @@
   async function loadVideoAndTranscript() {
     const videoId = document.getElementById('videoIdInput').value.trim();
     if (!videoId) {
-        alert('Please enter a Dailymotion video ID.');
-        return;
+      alert('Please enter a Dailymotion video ID.');
+      return;
     }
     const rawEN = document.getElementById('scriptEN').value.trim();
     const rawVI = document.getElementById('scriptVI').value.trim();
-
     if (player) {
       player.load({ video: videoId });
     } else {
@@ -187,76 +180,73 @@
           width: '100%',
           height: '450',
           params: {
-            origin: '*', // Sửa lỗi bảo mật Origin khi nhúng video
+            origin: '*',
           }
         });
-        
         const toggleBtn = document.getElementById('togglePause');
-
         toggleBtn.onclick = function () {
           if (!player) return;
           if (isPlaying) {
-              player.pause();
+            player.pause();
           } else {
-              player.play();
+            player.play();
           }
         };
-
-        player.on('play', () => { 
-            isPlaying = true;
-            toggleBtn.textContent = 'Pause';
-            toggleBtn.style.backgroundColor = '#28a745';
-            requestAnimationFrame(() => trackCurrentLine());
+        player.on('play', () => {
+          isPlaying = true;
+          toggleBtn.textContent = 'Pause';
+          toggleBtn.style.backgroundColor = '#28a745';
+          requestAnimationFrame(() => trackCurrentLine());
         });
-        player.on('pause', () => { 
-            isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#f44336';
+        player.on('pause', () => {
+          isPlaying = false;
+          toggleBtn.textContent = 'Play';
+          toggleBtn.style.backgroundColor = '#f44336';
         });
-        player.on('end', () => { 
-            isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#6c757d';
+        player.on('end', () => {
+          isPlaying = false;
+          toggleBtn.textContent = 'Play';
+          toggleBtn.style.backgroundColor = '#6c757d';
         });
-
       } catch (e) {
         console.error("Error creating Dailymotion player:", e);
         alert("Could not create Dailymotion player. Check the video ID and console for errors.");
         return;
       }
     }
-
     const en = parseTranscript(rawEN);
     const vi = parseTranscript(rawVI);
     const transcript = document.getElementById('transcript');
     transcript.innerHTML = '';
     transcriptData = [];
-
     for (let i = 0; i < Math.max(en.length, vi.length); i++) {
       if (en[i]) {
         const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
-        const div = createLineCard('en_'_ i, en[i].time, text, 'user');
+        // SỬA LỖI CÚ PHÁP Ở ĐÂY
+        const div = createLineCard('en_' + i, en[i].time, text, 'user');
         transcript.appendChild(div);
-        transcriptData.push({ id: 'en_'_ i, time: en[i].time });
+        // VÀ Ở ĐÂY
+        transcriptData.push({ id: 'en_' + i, time: en[i].time });
       }
       if (vi[i]) {
         const text = `[VI] ${vi[i].text}`;
-        const div = createLineCard('vi_'_ i, vi[i].time, text, 'machine');
+        // VÀ Ở ĐÂY
+        const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
         transcript.appendChild(div);
-        transcriptData.push({ id: 'vi_'_ i, time: vi[i].time });
+        // VÀ Ở ĐÂY
+        transcriptData.push({ id: 'vi_' + i, time: vi[i].time });
       }
     }
-    
     transcriptData.sort((a, b) => a.time - b.time);
   }
 
-document.getElementById('transcript').addEventListener('wheel', () => {
-  userScrolling = true;
-  clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(() => userScrolling = false, 3000);
-});
+  document.getElementById('transcript').addEventListener('wheel', () => {
+    userScrolling = true;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => userScrolling = false, 3000);
+  });
 
-document.addEventListener('dblclick', e => {
+  document.addEventListener('dblclick', e => {
     const line = e.target.closest('.line');
     if (line) {
       line.contentEditable = true;
@@ -286,57 +276,54 @@ document.addEventListener('dblclick', e => {
     if (oldResult) oldResult.remove();
     const oldPlayback = div.querySelector('.playback-container');
     if (oldPlayback) oldPlayback.remove();
-
     if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
       alert('Speech recognition or recording not supported in this browser');
       return;
     }
-
     navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            const mediaRecorder = new MediaRecorder(stream);
-            const audioChunks = [];
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const playbackContainer = document.createElement('div');
-                playbackContainer.className = 'playback-container result';
-                const listenButton = document.createElement('button');
-                listenButton.textContent = '▶️ Listen Again';
-                listenButton.style.marginTop = '5px';
-                listenButton.onclick = () => new Audio(audioUrl).play();
-                playbackContainer.appendChild(listenButton);
-                div.appendChild(playbackContainer);
-            };
-            mediaRecorder.start();
-
-            const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            recognition.onend = () => {
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop());
-            };
-            recognition.onresult = function(event) {
-                const spokenText = event.results[0][0].transcript;
-                const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]\s*/g, '').toLowerCase());
-                const resultEl = document.createElement('div');
-                resultEl.className = 'result';
-                resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
-                div.appendChild(resultEl);
-            };
-            recognition.onerror = function(event) {
-                alert('Error occurred in recognition: '  + event.error);
-                mediaRecorder.stop();
-            };
-            recognition.start();
-        })
-        .catch(err => {
-            alert('Could not access the microphone. Please grant permission.');
-            console.error("Error accessing microphone:", err);
-        });
+      .then(stream => {
+        const mediaRecorder = new MediaRecorder(stream);
+        const audioChunks = [];
+        mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const playbackContainer = document.createElement('div');
+          playbackContainer.className = 'playback-container result';
+          const listenButton = document.createElement('button');
+          listenButton.textContent = '▶️ Listen Again';
+          listenButton.style.marginTop = '5px';
+          listenButton.onclick = () => new Audio(audioUrl).play();
+          playbackContainer.appendChild(listenButton);
+          div.appendChild(playbackContainer);
+        };
+        mediaRecorder.start();
+        const recognition = new webkitSpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onend = () => {
+          mediaRecorder.stop();
+          stream.getTracks().forEach(track => track.stop());
+        };
+        recognition.onresult = function (event) {
+          const spokenText = event.results[0][0].transcript;
+          const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]\s*/g, '').toLowerCase());
+          const resultEl = document.createElement('div');
+          resultEl.className = 'result';
+          resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
+          div.appendChild(resultEl);
+        };
+        recognition.onerror = function (event) {
+          alert('Error occurred in recognition: ' + event.error);
+          mediaRecorder.stop();
+        };
+        recognition.start();
+      })
+      .catch(err => {
+        alert('Could not access the microphone. Please grant permission.');
+        console.error("Error accessing microphone:", err);
+      });
   }
 
   function similarity(s1, s2) {
@@ -374,31 +361,31 @@ document.addEventListener('dblclick', e => {
     const enChunks = [];
     const viChunks = [];
     for (const line of lines) {
-        const time = parseInt(line.dataset.time || '0');
-        const minutes = Math.floor(time / 60);
-        const seconds = (time % 60).toString().padStart(2, '0');
-        let content = line.innerHTML
-            .replace(/<button[^>]*>.*?<\/button>/g, '')
-            .replace(/<div class="result.*?">.*?<\/div>/g, '')
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<[^>]+>/g, '')
-            .replace(/\n{2,}/g, '\n')
-            .trim();
-        let block;
-        if (line.classList.contains('user')) {
-            const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
-            block = `${minutes}:${seconds}\n${cleanContent}`;
-            enChunks.push(block);
-        } else if (line.classList.contains('machine')) {
-            const cleanContent = content.replace(/^\[VI\]\s*/, '');
-            block = `${minutes}:${seconds}\n${cleanContent}`;
-            viChunks.push(block);
-        }
+      const time = parseInt(line.dataset.time || '0');
+      const minutes = Math.floor(time / 60);
+      const seconds = (time % 60).toString().padStart(2, '0');
+      let content = line.innerHTML
+        .replace(/<button[^>]*>.*?<\/button>/g, '')
+        .replace(/<div class="result.*?">.*?<\/div>/g, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/\n{2,}/g, '\n')
+        .trim();
+      let block;
+      if (line.classList.contains('user')) {
+        const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
+        block = `${minutes}:${seconds}\n${cleanContent}`;
+        enChunks.push(block);
+      } else if (line.classList.contains('machine')) {
+        const cleanContent = content.replace(/^\[VI\]\s*/, '');
+        block = `${minutes}:${seconds}\n${cleanContent}`;
+        viChunks.push(block);
+      }
     }
     const blob = new Blob([JSON.stringify({
-        videoId,
-        enText: enChunks.join('\n\n'),
-        viText: viChunks.join('\n\n')
+      videoId,
+      enText: enChunks.join('\n\n'),
+      viText: viChunks.join('\n\n')
     }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -406,24 +393,24 @@ document.addEventListener('dblclick', e => {
     a.download = `transcript_${videoId || 'video'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-}
+  }
 
-function loadScriptFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      document.getElementById('videoIdInput').value = data.videoId || '';
-      document.getElementById('scriptEN').value = data.enText || '';
-      document.getElementById('scriptVI').value = data.viText || '';
-    } catch (err) {
-      alert('Invalid JSON file.');
-    }
-  };
-  reader.readAsText(file);
-}
+  function loadScriptFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        document.getElementById('videoIdInput').value = data.videoId || '';
+        document.getElementById('scriptEN').value = data.enText || '';
+        document.getElementById('scriptVI').value = data.viText || '';
+      } catch (err) {
+        alert('Invalid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  }
 </script>
 </body>
 </html>
