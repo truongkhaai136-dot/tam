@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript (EN + VI) - Dailymotion Version (Fixed)</title>
+<title>Transcript (EN + VI) - Dailymotion Version (GitHub Pages Ready)</title>
 <style>
     body { font-family: Arial, sans-serif; }
     #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
@@ -13,8 +13,6 @@
     .machine { color: gray; margin-left: 10px; }
     .line[contenteditable="true"] { background-color: #ffffcc; outline: 1px dashed #999; }
     .highlight { background-color: #d1ecf1 !important; }
-    .record-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #2196f3; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .result { margin-top: 5px; font-size: 13px; padding-left: 8px; }
     #toolbar { display: none; position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; z-index: 1000; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 </style>
 <script src="https://api.dmcdn.net/all.js"></script>
@@ -58,7 +56,6 @@
 
   function trackCurrentLine() {
     if (!player) return;
-
     player.currentTime.then(currentTime => {
       let currentId = null;
       for (let i = 0; i < transcriptData.length; i++) {
@@ -71,11 +68,9 @@
       document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
       if (currentId) {
         const activeEl = document.getElementById(currentId);
-        if (activeEl && !activeEl.classList.contains('highlight')) {
+        if (activeEl) {
           activeEl.classList.add('highlight');
-          if (!userScrolling) {
-            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          if (!userScrolling) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
     });
@@ -116,9 +111,9 @@
     if (!videoId) { alert('Please enter a Dailymotion video ID.'); return; }
 
     if (player) {
-      player.load(videoId);
+      player.load({ video: videoId });
     } else {
-      player = DM.player(document.getElementById('player'), {
+      player = DM.player(document.getElementById("player"), {
         video: videoId,
         width: "100%",
         height: "450",
@@ -128,12 +123,14 @@
       const toggleBtn = document.getElementById('togglePause');
       toggleBtn.onclick = function () { isPlaying ? player.pause() : player.play(); };
 
+      player.addEventListener('apiready', () => console.log("Player ready"));
+
       player.addEventListener('play', () => {
         isPlaying = true;
         toggleBtn.textContent = 'Pause';
         toggleBtn.style.backgroundColor = '#28a745';
         if (trackingInterval) clearInterval(trackingInterval);
-        trackingInterval = setInterval(trackCurrentLine, 250);
+        trackingInterval = setInterval(trackCurrentLine, 500);
       });
 
       player.addEventListener('pause', () => {
@@ -143,7 +140,7 @@
         clearInterval(trackingInterval);
       });
 
-      player.addEventListener('end', () => {
+      player.addEventListener('ended', () => {
         isPlaying = false;
         toggleBtn.textContent = 'Play';
         toggleBtn.style.backgroundColor = '#6c757d';
