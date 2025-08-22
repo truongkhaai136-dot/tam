@@ -11,11 +11,41 @@
     .line:hover { background-color: #eef; }
     .user { font-weight: bold; }
     .machine { color: gray; margin-left: 10px; }
-    .line[contenteditable="true"] { background-color: #ffffcc; outline: 1px dashed #999; }
-    .highlight { background-color: #d1ecf1 !important; }
-    .record-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #2196f3; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .result { margin-top: 5px; font-size: 13px; padding-left: 8px; }
-    #toolbar { display: none; position: absolute; background: #fff; border: 1px solid #ccc; padding: 5px; z-index: 1000; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .line[contenteditable="true"] {
+      background-color: #ffffcc;
+      outline: 1px dashed #999;
+    }
+    .highlight {
+      background-color: #d1ecf1 !important;
+    }
+    .record-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 5px;
+      font-size: 13px;
+      padding-left: 8px;
+    }
+    #toolbar {
+      display: none;
+      position: absolute;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 5px;
+      z-index: 1000;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 </style>
 <script src="https://geo.dailymotion.com/player.js"></script>
 </head>
@@ -64,6 +94,33 @@
   let transcriptData = [];
   let userScrolling = false;
   let scrollTimeout = null;
+  let isPlaying = false;
+
+  async function trackCurrentLine() {
+    if (!player) return;
+
+    const currentTime = await player.getCurrentTime();
+    let currentId = null;
+    for (let i = 0; i < transcriptData.length; i++) {
+      const line = transcriptData[i];
+      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+        currentId = line.id;
+        break;
+      }
+    }
+    document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    if (currentId && currentId.startsWith('en_')) {
+      const activeEl = document.getElementById(currentId);
+      if (activeEl) {
+        activeEl.classList.add('highlight');
+        if (!userScrolling) {
+            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+
+    requestAnimationFrame(trackCurrentLine);
+  }
 
   function parseTranscript(raw) {
     const lines = raw.trim().split('\n');
@@ -132,49 +189,34 @@
 
         toggleBtn.onclick = function () {
           if (!player) return;
-          // Thay vì dùng biến isPlaying, ta kiểm tra trực tiếp trạng thái của player
-          if (player.paused) {
-              player.play();
-          } else {
+          if (isPlaying) {
               player.pause();
+          } else {
+              player.play();
           }
         };
 
-        // === LOGIC ĐỒNG BỘ HÓA MỚI, HIỆU QUẢ HƠN ===
-        player.on('timeupdate', (event) => {
-            const currentTime = event.time; // Lấy thời gian trực tiếp từ sự kiện
-            let currentId = null;
-
-            for (let i = 0; i < transcriptData.length; i++) {
-                const line = transcriptData[i];
-                if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-                    currentId = line.id;
-                    break;
-                }
-            }
-
-            const activeEl = document.getElementById(currentId);
-            if (activeEl && !activeEl.classList.contains('highlight')) {
-                document.querySelectorAll('.line.highlight').forEach(el => el.classList.remove('highlight'));
-                activeEl.classList.add('highlight');
-                if (!userScrolling) {
-                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-        });
-
         player.on('play', () => { 
+            isPlaying = true;
             toggleBtn.textContent = 'Pause';
             toggleBtn.style.backgroundColor = '#28a745';
         });
         player.on('pause', () => { 
+            isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#f44336';
         });
         player.on('end', () => { 
+            isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#6c757d';
         });
+        player.on('seeked', () => {
+            trackCurrentLine();
+        });
+
+        // 🔥 bắt đầu theo dõi transcript ngay khi tạo player xong
+        trackCurrentLine();
 
       } catch (e) {
         console.error("Error creating Dailymotion player:", e);
@@ -204,13 +246,13 @@
     }
   }
 
-  document.getElementById('transcript').addEventListener('wheel', () => {
-    userScrolling = true;
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => userScrolling = false, 3000);
-  });
+document.getElementById('transcript').addEventListener('wheel', () => {
+  userScrolling = true;
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => userScrolling = false, 3000);
+});
 
-  document.addEventListener('dblclick', e => {
+document.addEventListener('dblclick', e => {
     const line = e.target.closest('.line');
     if (line) {
       line.contentEditable = true;
@@ -218,7 +260,7 @@
     }
   });
 
-  document.addEventListener('mouseup', e => {
+document.addEventListener('mouseup', e => {
     const sel = window.getSelection();
     if (sel.toString().length > 0 && sel.getRangeAt(0).startContainer.parentElement.closest('.line')) {
       const rect = sel.getRangeAt(0).getBoundingClientRect();
@@ -333,8 +375,8 @@
         const seconds = (time % 60).toString().padStart(2, '0');
         let content = line.innerHTML
             .replace(/<button[^>]*>.*?<\/button>/g, '')
-            .replace(/<div class="result.*?">.*?<\/div>/g, '')
-            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<div class=\"result.*?\">.*?<\/div>/g, '')
+            .replace(/<br\s*\/?>(?i)/gi, '\n')
             .replace(/<[^>]+>/g, '')
             .replace(/\n{2,}/g, '\n')
             .trim();
@@ -356,28 +398,3 @@
     }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `transcript_${videoId || 'video'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function loadScriptFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      document.getElementById('videoIdInput').value = data.videoId || '';
-      document.getElementById('scriptEN').value = data.enText || '';
-      document.getElementById('scriptVI').value = data.viText || '';
-    } catch (err) {
-      alert('Invalid JSON file.');
-    }
-  };
-  reader.readAsText(file);
-}
-</script>
-</body>
-</html>
