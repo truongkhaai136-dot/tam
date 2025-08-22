@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript (EN + VI) - Dailymotion Version (Synced v3)</title>
+<title>Transcript (EN + VI) - Dailymotion Version (Synced v4)</title>
+<link rel="icon" href="data:,">
 <style>
   body { font-family: Arial, sans-serif; }
   #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
@@ -146,7 +147,15 @@
     const rawVI = document.getElementById('scriptVI').value.trim();
 
     if (player) {
-      player.load({ video: videoId });
+      if (typeof player.loadVideoById === "function") {
+        player.loadVideoById(videoId);
+      } else {
+        // fallback: recreate player if API doesn't support reload
+        document.getElementById('player').innerHTML = "";
+        player = await dailymotion.createPlayer('player', {
+          video: videoId, width: '100%', height: '450', params: { origin: window.location.origin }
+        });
+      }
     } else {
       try {
         player = await dailymotion.createPlayer('player', {
@@ -248,11 +257,9 @@
   function startSpeechRecognition(div, expectedText) {
     const oldResult = div.querySelector('.result'); if (oldResult) oldResult.remove();
     const oldPlayback = div.querySelector('.playback-container'); if (oldPlayback) oldPlayback.remove();
-
     if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
       alert('Speech recognition or recording not supported in this browser'); return;
     }
-
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         const mediaRecorder = new MediaRecorder(stream);
@@ -271,7 +278,6 @@
           div.appendChild(playbackContainer);
         };
         mediaRecorder.start();
-
         const recognition = new webkitSpeechRecognition();
         recognition.lang = 'en-US';
         recognition.interimResults = false;
@@ -333,22 +339,17 @@
     const lines = document.querySelectorAll('.line');
     const enChunks = [];
     const viChunks = [];
-
     for (const line of lines) {
       const time = parseInt(line.dataset.time || '0', 10);
       const minutes = Math.floor(time / 60);
       const seconds = (time % 60).toString().padStart(2, '0');
-
       const clone = line.cloneNode(true);
       clone.querySelectorAll('button.record-btn, .result, .playback-container').forEach(el => el.remove());
-
-      // Replace <br> with newline, strip remaining tags
       let content = clone.innerHTML
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .replace(/\n{2,}/g, '\n')
         .trim();
-
       let block;
       if (line.classList.contains('user')) {
         const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
@@ -360,11 +361,9 @@
         viChunks.push(block);
       }
     }
-
     const blob = new Blob([JSON.stringify({
       videoId, enText: enChunks.join('\n\n'), viText: viChunks.join('\n\n')
     }, null, 2)], { type: 'application/json' });
-
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -388,7 +387,7 @@
     reader.readAsText(file);
   }
 
-  // Ensure functions are on window for inline onclick handlers
+  // attach to window
   window.loadVideoAndTranscript = loadVideoAndTranscript;
   window.saveScripts = saveScripts;
   window.execCmd = execCmd;
