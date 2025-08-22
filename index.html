@@ -235,11 +235,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             <div class="input-group">
                 <label for="en-script">2. Dán lời thoại tiếng Anh:</label>
-                <textarea id="en-script" placeholder="[0:02]&#10;If I could live in a place like this..."></textarea>
+                <textarea id="en-script" placeholder="0:02&#10;If I could live in a place like this..."></textarea>
             </div>
             <div class="input-group">
                 <label for="vi-script">3. Dán lời thoại tiếng Việt:</label>
-                <textarea id="vi-script" placeholder="[0:02]&#10;Nếu mình có thể sống ở một nơi như thế này..."></textarea>
+                <textarea id="vi-script" placeholder="0:02&#10;Nếu mình có thể sống ở một nơi như thế này..."></textarea>
             </div>
         </div>
         <div class="button-group">
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         parseAndCombineTranscripts(enScript, viScript);
         if (transcriptData.length === 0) {
-            alert("Không thể phân tích lời thoại. Vui lòng kiểm tra định dạng (phải có mốc thời gian như [00:02] hoặc [0:02]).");
+            alert("Không thể phân tích lời thoại. Vui lòng kiểm tra định dạng (mỗi mốc thời gian phải ở đầu dòng, ví dụ: '0:02' hoặc '10:30').");
             return;
         }
         
@@ -344,14 +344,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const lines = script.trim().split(/\r?\n/);
         const data = {};
         let currentTime = -1;
-        const timeRegex = /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/;
+        // *** THAY ĐỔI CHÍNH Ở ĐÂY ***
+        // Biểu thức chính quy mới để tìm thời gian ở đầu dòng, không cần dấu ngoặc
+        const timeRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)/;
 
         lines.forEach(line => {
+            line = line.trim();
             const timeMatch = line.match(timeRegex);
             if (timeMatch) {
+                // Nếu dòng bắt đầu bằng một mốc thời gian
                 currentTime = timeToSeconds(timeMatch[1]);
+                // Lấy phần văn bản sau mốc thời gian
                 line = line.replace(timeRegex, '').trim();
             }
+            
+            // Thêm văn bản vào mốc thời gian hiện tại
             if (currentTime !== -1 && line) {
                 if (!data[currentTime]) data[currentTime] = "";
                 data[currentTime] += (data[currentTime] ? " " : "") + line;
@@ -701,8 +708,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 transcriptData = sessionData.transcripts;
 
                 // Điền lại vào textarea để người dùng thấy
-                enScriptInput.value = transcriptData.map(l => `[${new Date(l.time * 1000).toISOString().substr(14, 5)}]\n${l.en.replace(/<[^>]*>?/gm, '')}`).join('\n\n');
-                viScriptInput.value = transcriptData.map(l => `[${new Date(l.time * 1000).toISOString().substr(14, 5)}]\n${l.vi.replace(/<[^>]*>?/gm, '')}`).join('\n\n');
+                enScriptInput.value = transcriptData.map(l => `${new Date(l.time * 1000).toISOString().substr(14, 5)}\n${l.en.replace(/<[^>]*>?/gm, '')}`).join('\n\n');
+                viScriptInput.value = transcriptData.map(l => `${new Date(l.time * 1000).toISOString().substr(14, 5)}\n${l.vi.replace(/<[^>]*>?/gm, '')}`).join('\n\n');
                 
                 // Tải trực tiếp mà không cần bấm nút
                 renderTranscript();
