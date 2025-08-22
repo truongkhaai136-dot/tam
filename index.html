@@ -6,7 +6,7 @@
 <style>
     body { font-family: Arial, sans-serif; }
     #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
-    #transcript { max-width: 800px; margin: 0 auto; }
+    #transcript { max-width: 800px; margin: 0 auto; max-height: 500px; overflow-y: auto; }
     .line { padding: 8px; border-bottom: 1px solid #ccc; cursor: pointer; position: relative; }
     .line:hover { background-color: #eef; }
     .user { font-weight: bold; }
@@ -99,6 +99,9 @@
   function trackCurrentLine() {
     if (!player || !isPlaying) return;
     const currentTime = player.currentTime;
+    // DEBUG 1: Kiểm tra xem hàm có đang chạy và thời gian có đúng không
+    console.log(`⏱️ Tracking at time: ${currentTime.toFixed(2)}s`);
+
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
@@ -107,17 +110,27 @@
         break;
       }
     }
+
     document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    
     if (currentId) {
+      // DEBUG 2: Kiểm tra xem có tìm thấy ID của dòng hiện tại không
+      console.log(`✅ Found current line ID: ${currentId}`);
       let highlightId = currentId.startsWith('vi_') ? currentId.replace('vi_', 'en_') : currentId;
       const activeEl = document.getElementById(highlightId);
       if (activeEl) {
         activeEl.classList.add('highlight');
         if (!userScrolling) {
+          // DEBUG 3: Kiểm tra xem có thực hiện lệnh cuộn không
+          console.log(`📜 Scrolling to element: #${highlightId}`);
           activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          // DEBUG 4: Kiểm tra xem việc cuộn có bị người dùng tạm dừng không
+          console.log("🚫 Scrolling paused by user.");
         }
       }
     }
+
     if (isPlaying) {
       requestAnimationFrame(() => trackCurrentLine());
     }
@@ -193,12 +206,16 @@
           }
         };
         player.on('play', () => {
+          // DEBUG 5: Kiểm tra xem sự kiện 'play' có được kích hoạt không
+          console.log("▶️ Play event fired. Starting tracking loop.");
           isPlaying = true;
           toggleBtn.textContent = 'Pause';
           toggleBtn.style.backgroundColor = '#28a745';
           requestAnimationFrame(() => trackCurrentLine());
         });
         player.on('pause', () => {
+          // DEBUG 6: Kiểm tra xem sự kiện 'pause' có được kích hoạt không
+          console.log("⏸️ Pause event fired. Stopping tracking loop.");
           isPlaying = false;
           toggleBtn.textContent = 'Play';
           toggleBtn.style.backgroundColor = '#f44336';
@@ -222,18 +239,14 @@
     for (let i = 0; i < Math.max(en.length, vi.length); i++) {
       if (en[i]) {
         const text = `[${Math.floor(en[i].time / 60)}:${(en[i].time % 60).toString().padStart(2, '0')}] ${en[i].text}`;
-        // SỬA LỖI CÚ PHÁP Ở ĐÂY
         const div = createLineCard('en_' + i, en[i].time, text, 'user');
         transcript.appendChild(div);
-        // VÀ Ở ĐÂY
         transcriptData.push({ id: 'en_' + i, time: en[i].time });
       }
       if (vi[i]) {
         const text = `[VI] ${vi[i].text}`;
-        // VÀ Ở ĐÂY
         const div = createLineCard('vi_' + i, vi[i].time, text, 'machine');
         transcript.appendChild(div);
-        // VÀ Ở ĐÂY
         transcriptData.push({ id: 'vi_' + i, time: vi[i].time });
       }
     }
