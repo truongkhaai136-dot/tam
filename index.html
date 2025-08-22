@@ -215,7 +215,7 @@
             trackCurrentLine();
         });
 
-        // 🔥 bắt đầu theo dõi transcript ngay khi tạo player xong
+        // start tracking transcript after player created
         trackCurrentLine();
 
       } catch (e) {
@@ -398,3 +398,28 @@ document.addEventListener('mouseup', e => {
     }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript_${videoId || 'video'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function loadScriptFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      document.getElementById('videoIdInput').value = data.videoId || '';
+      document.getElementById('scriptEN').value = data.enText || '';
+      document.getElementById('scriptVI').value = data.viText || '';
+    } catch (err) {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
+</body>
+</html>
