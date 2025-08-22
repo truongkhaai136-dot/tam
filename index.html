@@ -3,580 +3,640 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ Học Ngôn ngữ với Dailymotion</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Công cụ Học Tiếng Anh qua Video</title>
     <style>
+        :root {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --card-bg: #0f3460;
+            --text-color: #e94560;
+            --light-text: #dcdcdc;
+            --highlight-color: rgba(233, 69, 96, 0.2);
+            --border-color: #e94560;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--light-text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
         }
-        .highlight {
-            background-color: #fef9c3; /* yellow-100 */
-            color: #713f12; /* yellow-900 */
-            font-weight: bold;
-            transition: background-color 0.3s ease-in-out;
+
+        h1 {
+            text-align: center;
+            color: var(--text-color);
+            margin-bottom: 20px;
         }
-        .subtitle-container {
-            height: calc(100vh - 450px);
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        .editor-toolbar {
-            display: none;
-            position: absolute;
-            background-color: #374151; /* gray-700 */
-            border-radius: 6px;
-            padding: 4px;
-            gap: 4px;
-            z-index: 10;
+
+        .controls > div {
+            flex: 1;
+            min-width: 250px;
         }
-        .editor-toolbar button, .editor-toolbar input[type="color"] {
-            background: none;
+
+        .controls label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .controls input[type="text"],
+        .controls textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--secondary-bg);
+            color: var(--light-text);
+            box-sizing: border-box;
+        }
+
+        .controls textarea {
+            height: 150px;
+            resize: vertical;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        button, input[type="file"]::file-selector-button {
+            padding: 10px 15px;
             border: none;
+            border-radius: 5px;
+            background-color: var(--text-color);
             color: white;
-            padding: 6px;
-            border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
         }
-        .editor-toolbar button:hover {
-            background-color: #4b5563; /* gray-600 */
+
+        button:hover, input[type="file"]::file-selector-button:hover {
+            background-color: #c73850;
         }
-        input[type="color"] {
-            width: 30px;
-            height: 30px;
-            padding: 2px;
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            overflow: hidden;
         }
-        [contenteditable]:focus {
-            outline: 2px solid #3b82f6; /* blue-500 */
-            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+
+        .video-container {
+            flex: 1;
+            min-width: 400px;
         }
-        #player iframe {
+        #player {
             width: 100%;
             height: 100%;
-            aspect-ratio: 16 / 9;
+            min-height: 400px;
+            background-color: black;
+            border-radius: 8px;
         }
+
+        .lyrics-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            background-color: var(--secondary-bg);
+            scroll-behavior: smooth;
+        }
+
+        .line-pair {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+
+        .line-pair.highlight {
+            background-color: var(--highlight-color);
+        }
+        
+        .line-pair.highlight .en-line {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .line {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .line:focus {
+            outline: 1px solid var(--text-color);
+        }
+
+        .en-line {
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .vi-line {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .pronunciation-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mic-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 0;
+            color: var(--light-text);
+        }
+        .mic-btn.recording {
+            color: red;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .score {
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .listen-again-btn {
+            font-size: 0.8em;
+            padding: 2px 6px;
+            background-color: #0f3460;
+            border: 1px solid var(--text-color);
+        }
+
+        #format-toolbar {
+            position: absolute;
+            display: none;
+            background-color: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 5px;
+            z-index: 1000;
+        }
+
+        #format-toolbar button {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            font-size: 16px;
+            padding: 5px;
+            min-width: 30px;
+        }
+        #format-toolbar input[type="color"] {
+            border: none;
+            background: none;
+            width: 25px;
+            height: 25px;
+            padding: 0;
+        }
+
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body>
 
-    <div class="container mx-auto p-4 max-w-7xl">
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-700">Công cụ Học Ngôn ngữ qua Video</h1>
-            <p class="text-gray-500">Đồng bộ lời thoại Dailymotion, luyện phát âm và hơn thế nữa</p>
-        </header>
+    <h1>Công cụ Học Tiếng Anh qua Video</h1>
 
-        <!-- Input Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div class="md:col-span-3">
-                <label for="videoId" class="block text-sm font-medium text-gray-700">Dailymotion Video ID</label>
-                <input type="text" id="videoId" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="ví dụ: x7s5w5g">
-            </div>
-            <div>
-                <label for="enSubtitles" class="block text-sm font-medium text-gray-700">Lời thoại Tiếng Anh</label>
-                <textarea id="enSubtitles" rows="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="Dán lời thoại vào đây. Hỗ trợ nhiều định dạng."></textarea>
-            </div>
-            <div>
-                <label for="viSubtitles" class="block text-sm font-medium text-gray-700">Lời thoại Tiếng Việt</label>
-                <textarea id="viSubtitles" rows="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2" placeholder="Dán lời thoại vào đây. Hỗ trợ nhiều định dạng."></textarea>
-            </div>
-            <div class="flex flex-col justify-between space-y-2">
-                 <button id="loadBtn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-300 shadow-md">Tải & Hiển thị</button>
-                 <div class="flex space-x-2">
-                    <button id="saveBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition duration-300 shadow-md">Lưu Phiên</button>
-                    <button onclick="document.getElementById('loadFile').click()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300 shadow-md">Mở Phiên</button>
-                    <input type="file" id="loadFile" class="hidden" accept=".json">
-                 </div>
-            </div>
+    <div class="controls">
+        <div>
+            <label for="videoId">Dailymotion Video ID</label>
+            <input type="text" id="videoId" placeholder="Ví dụ: x7z5x9z">
         </div>
-
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Video Player -->
-            <div>
-                <div id="player" class="w-full aspect-video bg-black rounded-lg shadow-lg overflow-hidden"></div>
-                 <p id="status" class="text-center mt-2 text-gray-500">Vui lòng nhập ID video và lời thoại để bắt đầu.</p>
-            </div>
-
-            <!-- Subtitles -->
-            <div id="subtitle-container" class="subtitle-container bg-white p-4 rounded-lg shadow-lg overflow-y-auto border">
-                <!-- Subtitles will be injected here -->
-            </div>
+        <div>
+            <label for="enSubtitles">English Subtitles</label>
+            <textarea id="enSubtitles" placeholder="Dán lời thoại tiếng Anh vào đây. Định dạng: [mm:ss.mss] text..."></textarea>
+        </div>
+        <div>
+            <label for="viSubtitles">Vietnamese Subtitles</label>
+            <textarea id="viSubtitles" placeholder="Dán lời thoại tiếng Việt vào đây. Định dạng: [mm:ss.mss] text..."></textarea>
         </div>
     </div>
 
-    <!-- Editor Toolbar -->
-    <div id="editor-toolbar" class="editor-toolbar">
-        <button id="bold-btn" title="In đậm"><i class="fas fa-bold"></i></button>
-        <button id="italic-btn" title="In nghiêng"><i class="fas fa-italic"></i></button>
-        <button id="underline-btn" title="Gạch chân"><i class="fas fa-underline"></i></button>
-        <input type="color" id="color-picker" title="Chọn màu chữ">
+    <div class="action-buttons">
+        <button id="loadBtn">Tải Video và Lời thoại</button>
+        <button id="saveBtn">Lưu phiên làm việc (.json)</button>
+        <label for="loadFile" style="margin: 0;">
+            <button onclick="document.getElementById('loadFile').click();" style="pointer-events: none;">Mở phiên làm việc</button>
+        </label>
+        <input type="file" id="loadFile" accept=".json" style="display: none;">
+    </div>
+    
+    <div id="format-toolbar">
+        <button data-command="bold"><b>B</b></button>
+        <button data-command="italic"><i>I</i></button>
+        <button data-command="underline"><u>U</u></button>
+        <input type="color" data-command="foreColor" title="Chọn màu chữ">
     </div>
 
+    <div class="main-content">
+        <div class="video-container">
+            <div id="player"></div>
+        </div>
+        <div class="lyrics-container" id="lyrics-container">
+            <p>Vui lòng nhập ID video và lời thoại, sau đó nhấn nút tải.</p>
+        </div>
+    </div>
+
+    <script src="https://api.dmcdn.net/all.js"></script>
     <script>
-        // DOM Elements
-        const videoIdInput = document.getElementById('videoId');
-        const enSubtitlesInput = document.getElementById('enSubtitles');
-        const viSubtitlesInput = document.getElementById('viSubtitles');
-        const loadBtn = document.getElementById('loadBtn');
-        const saveBtn = document.getElementById('saveBtn');
-        const loadFileInput = document.getElementById('loadFile');
-        const playerContainer = document.getElementById('player');
-        const subtitleContainer = document.getElementById('subtitle-container');
-        const statusEl = document.getElementById('status');
-        const editorToolbar = document.getElementById('editor-toolbar');
+        document.addEventListener('DOMContentLoaded', () => {
+            const videoIdInput = document.getElementById('videoId');
+            const enSubtitlesInput = document.getElementById('enSubtitles');
+            const viSubtitlesInput = document.getElementById('viSubtitles');
+            const loadBtn = document.getElementById('loadBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const loadFileInput = document.getElementById('loadFile');
+            const lyricsContainer = document.getElementById('lyrics-container');
+            const playerElement = document.getElementById('player');
+            const formatToolbar = document.getElementById('format-toolbar');
 
-        // App State
-        let player;
-        let isPlayerReady = false;
-        let subtitles = [];
-        let userScrolling = false;
-        let scrollTimeout;
-        const PLAYER_ID = 'dm-player';
-        let readyCheckInterval;
+            let player;
+            let subtitles = [];
+            let currentHighlightIndex = -1;
+            let userHasScrolled = false;
 
-        // Web Speech API
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-        } else {
-            console.warn("Trình duyệt không hỗ trợ Web Speech API.");
-        }
+            // --- 1. Tải và Hiển thị Đồng bộ ---
 
-        // Media Recorder API
-        let mediaRecorder;
-        let audioChunks = [];
+            const parseTime = (timeStr) => {
+                const parts = timeStr.match(/(\d{2}):(\d{2})\.(\d+)/);
+                if (!parts) return 0;
+                const minutes = parseInt(parts[1], 10);
+                const seconds = parseInt(parts[2], 10);
+                const milliseconds = parseInt(parts[3], 10);
+                return minutes * 60 + seconds + milliseconds / 1000;
+            };
 
-        // --- Event Listeners ---
-        loadBtn.addEventListener('click', initialize);
-        saveBtn.addEventListener('click', saveSession);
-        loadFileInput.addEventListener('change', loadSession);
+            const parseSubtitles = (text) => {
+                const lines = text.trim().split('\n');
+                const regex = /\[(\d{2}:\d{2}\.\d+)\](.*)/;
+                return lines.map(line => {
+                    const match = line.match(regex);
+                    if (match) {
+                        return { time: parseTime(match[1]), text: match[2].trim() };
+                    }
+                    return null;
+                }).filter(Boolean);
+            };
 
-        subtitleContainer.addEventListener('scroll', () => {
-            userScrolling = true;
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                userScrolling = false;
-            }, 2000);
-        });
-
-        // Listen for messages from the Dailymotion player iframe
-        window.addEventListener('message', (event) => {
-            if (event.origin !== "https://www.dailymotion.com") return;
-            try {
-                const data = JSON.parse(event.data);
-                if (data.id !== PLAYER_ID) return;
-
-                // [FIX] Bất kỳ phản hồi nào cũng được coi là dấu hiệu sẵn sàng
-                if (!isPlayerReady && (data.event === 'apiready' || data.event === 'pong')) {
-                    isPlayerReady = true;
-                    clearInterval(readyCheckInterval);
-                    statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                    postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
-                    postToPlayer({ command: 'addEventListener', parameters: ['play'] });
+            const loadContent = () => {
+                const videoId = videoIdInput.value.trim();
+                if (!videoId) {
+                    alert('Vui lòng nhập Dailymotion Video ID.');
+                    return;
                 }
 
-                switch (data.event) {
-                    case 'play':
-                        statusEl.textContent = 'Video đang phát...';
-                        break;
-                    case 'timeupdate':
-                        const currentTime = data.time || (data.parameters && data.parameters.time);
-                        if (typeof currentTime !== 'undefined') {
-                            handleTimeUpdate(currentTime);
-                        }
-                        break;
-                }
-            } catch (error) {
-                // Ignore non-JSON messages
-            }
-        });
-
-        // --- Core Functions ---
-
-        function initialize() {
-            const videoId = videoIdInput.value.trim();
-            if (!videoId) {
-                alert('Vui lòng nhập Dailymotion Video ID.');
-                return;
-            }
-            statusEl.textContent = 'Đang tải video và lời thoại...';
-            playerContainer.innerHTML = '';
-            isPlayerReady = false;
-            lastHighlightedId = null;
-            clearInterval(readyCheckInterval);
-
-            try {
                 const enSubs = parseSubtitles(enSubtitlesInput.value);
                 const viSubs = parseSubtitles(viSubtitlesInput.value);
-                subtitles = mergeSubtitles(enSubs, viSubs);
-                
-                if (subtitles.length === 0) {
-                    statusEl.textContent = 'Không tìm thấy lời thoại hợp lệ. Vui lòng kiểm tra định dạng.';
-                    return;
-                }
+
+                // Kết hợp 2 phụ đề
+                subtitles = enSubs.map((enLine, index) => ({
+                    time: enLine.time,
+                    en: enLine.text,
+                    vi: viSubs[index] ? viSubs[index].text : ''
+                }));
+
                 displaySubtitles();
-                setupPlayer(videoId);
-            } catch (error) {
-                console.error("Lỗi khi xử lý lời thoại:", error);
-                statusEl.textContent = `Lỗi xử lý lời thoại: ${error.message}. Vui lòng kiểm tra định dạng.`;
-            }
-        }
-        
-        function parseTime(timeStr) {
-            const parts = timeStr.split(':');
-            let time = 0;
-            if (parts.length >= 2) {
-                const minutes = parseInt(parts[parts.length - 2], 10) || 0;
-                const seconds = parseFloat(parts[parts.length - 1]) || 0;
-                time = minutes * 60 + seconds;
-                if (parts.length === 3) {
-                    const hours = parseInt(parts[0], 10) || 0;
-                    time += hours * 3600;
-                }
-            } else {
-                time = parseFloat(parts[0]) || 0;
-            }
-            return time;
-        }
+                initDailymotionPlayer(videoId);
+            };
 
-        function parseSubtitles(text) {
-            const lines = text.trim().split('\n').filter(line => line.trim() !== '');
-            const subs = [];
-            const singleLineRegex = /(?:\[)?((?:\d{1,2}:)?\d{1,2}:\d{1,2}(?:\.\d{1,3})?|\d+(?:\.\d+)?)(?:\])?\s+(.+)/;
-            const timeOnlyRegex = /^(?:\[)?((?:\d{1,2}:)?\d{1,2}:\d{1,2}(?:\.\d{1,3})?|\d+(?:\.\d+)?)(?:\])?$/;
+            const displaySubtitles = () => {
+                lyricsContainer.innerHTML = '';
+                subtitles.forEach((line, index) => {
+                    const pairDiv = document.createElement('div');
+                    pairDiv.className = 'line-pair';
+                    pairDiv.dataset.index = index;
+                    pairDiv.dataset.time = line.time;
 
-            let i = 0;
-            while (i < lines.length) {
-                const line = lines[i].trim();
-                let match = line.match(singleLineRegex);
-                if (match) {
-                    subs.push({ time: parseTime(match[1]), content: match[2].trim() });
-                    i++;
-                    continue;
+                    const enDiv = document.createElement('div');
+                    enDiv.className = 'line en-line';
+                    enDiv.innerHTML = `
+                        <div class="pronunciation-controls">
+                            <button class="mic-btn" title="Ghi âm và chấm điểm phát âm">🎤</button>
+                            <span class="score"></span>
+                        </div>
+                        <span class="text-content">${line.en}</span>
+                    `;
+
+                    const viDiv = document.createElement('div');
+                    viDiv.className = 'line vi-line';
+                    viDiv.innerHTML = `<span class="text-content">${line.vi}</span>`;
+
+                    pairDiv.appendChild(enDiv);
+                    pairDiv.appendChild(viDiv);
+                    lyricsContainer.appendChild(pairDiv);
+                });
+            };
+            
+            const initDailymotionPlayer = (videoId) => {
+                if(player) {
+                    player.load(videoId);
+                } else {
+                    player = DM.player(playerElement, {
+                        video: videoId,
+                        width: '100%',
+                        height: '100%',
+                        params: { autoplay: false, controls: true }
+                    });
+                    player.addEventListener('timeupdate', onTimeUpdate);
                 }
-                match = line.match(timeOnlyRegex);
-                if (match && i + 1 < lines.length) {
-                    const nextLine = lines[i+1].trim();
-                    if (!nextLine.match(timeOnlyRegex)) {
-                        subs.push({ time: parseTime(match[1]), content: nextLine });
-                        i += 2;
-                        continue;
+            };
+            
+            const onTimeUpdate = () => {
+                if (!player || !subtitles.length) return;
+                const currentTime = player.currentTime;
+                let newHighlightIndex = -1;
+
+                for (let i = subtitles.length - 1; i >= 0; i--) {
+                    if (currentTime >= subtitles[i].time) {
+                        newHighlightIndex = i;
+                        break;
                     }
                 }
-                i++;
-            }
-            subs.sort((a, b) => a.time - b.time);
-            return subs;
-        }
 
-        function mergeSubtitles(enSubs, viSubs) {
-            if (enSubs.length === 0) return [];
-            let merged = [];
-            for(let i = 0; i < enSubs.length; i++) {
-                merged.push({
-                    id: `sub-${i}`,
-                    time: enSubs[i].time,
-                    en: enSubs[i].content,
-                    vi: viSubs[i] ? viSubs[i].content : ''
-                });
-            }
-            merged.sort((a, b) => a.time - b.time);
-            return merged;
-        }
+                if (newHighlightIndex !== currentHighlightIndex) {
+                    const oldLine = lyricsContainer.querySelector(`[data-index="${currentHighlightIndex}"]`);
+                    if (oldLine) oldLine.classList.remove('highlight');
+                    
+                    const newLine = lyricsContainer.querySelector(`[data-index="${newHighlightIndex}"]`);
+                    if (newLine) {
+                        newLine.classList.add('highlight');
+                        if (!userHasScrolled) {
+                             newLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                    currentHighlightIndex = newHighlightIndex;
+                }
+            };
 
-        function displaySubtitles() {
-            subtitleContainer.innerHTML = '';
-            subtitles.forEach(sub => {
-                const lineEl = document.createElement('div');
-                lineEl.className = 'p-2 mb-2 rounded-md cursor-pointer hover:bg-gray-200 transition-colors';
-                lineEl.dataset.time = sub.time;
-                lineEl.id = sub.id;
-
-                const enEl = document.createElement('p');
-                enEl.className = 'text-gray-800 font-semibold';
-                enEl.innerHTML = sub.en;
-                enEl.dataset.lang = 'en';
-                
-                const controlContainer = document.createElement('div');
-                controlContainer.className = 'flex items-center gap-2 mt-1';
-
-                const recordBtn = document.createElement('button');
-                recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                recordBtn.className = 'record-btn text-red-500 hover:text-red-700';
-                recordBtn.title = 'Ghi âm và chấm điểm phát âm';
-                recordBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    startPronunciationPractice(sub.id);
-                };
-
-                const practiceResultEl = document.createElement('div');
-                practiceResultEl.id = `result-${sub.id}`;
-                practiceResultEl.className = 'text-sm text-gray-600 flex-grow';
-
-                controlContainer.appendChild(recordBtn);
-                controlContainer.appendChild(practiceResultEl);
-
-                const viEl = document.createElement('p');
-                viEl.className = 'text-gray-600 mt-1';
-                viEl.innerHTML = sub.vi;
-                viEl.dataset.lang = 'vi';
-
-                lineEl.appendChild(enEl);
-                lineEl.appendChild(controlContainer);
-                lineEl.appendChild(viEl);
-                
-                lineEl.addEventListener('click', () => {
-                    postToPlayer({ command: 'seek', parameters: [sub.time] });
-                    userScrolling = false;
-                });
-
-                enEl.addEventListener('dblclick', makeEditable);
-                viEl.addEventListener('dblclick', makeEditable);
-
-                subtitleContainer.appendChild(lineEl);
+            lyricsContainer.addEventListener('scroll', () => {
+                // Heuristic: if scroll is not triggered by our code, user has scrolled.
+                // A better check would be to see if scroll is near top/bottom of element.
+                // For simplicity, we use a timeout. If user scrolls, disable auto-scroll for a while.
+                userHasScrolled = true;
+                setTimeout(() => { userHasScrolled = false; }, 5000); // Re-enable after 5s of inactivity
             });
-        }
 
-        function setupPlayer(videoId) {
-            player = document.createElement('iframe');
-            player.id = PLAYER_ID;
-            player.setAttribute('frameborder', '0');
-            player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            // --- 2. Tương tác với Video và Lời thoại ---
             
-            const origin = window.location.origin;
-            player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}&origin=${origin}`;
-            
-            playerContainer.appendChild(player);
+            lyricsContainer.addEventListener('click', (e) => {
+                const linePair = e.target.closest('.line-pair');
+                if (linePair && player) {
+                    const time = parseFloat(linePair.dataset.time);
+                    if (!isNaN(time)) {
+                        player.seek(time);
+                        userHasScrolled = false; // Re-enable auto-scroll on click
+                    }
+                }
+            });
 
-            // [FIX] Chủ động "ping" video để kiểm tra trạng thái sẵn sàng
-            readyCheckInterval = setInterval(() => {
-                if (isPlayerReady) {
-                    clearInterval(readyCheckInterval);
+            lyricsContainer.addEventListener('dblclick', (e) => {
+                const textContent = e.target.closest('.text-content');
+                if (textContent) {
+                    textContent.contentEditable = true;
+                    textContent.focus();
+                }
+            });
+            
+            document.addEventListener('selectionchange', () => {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0 && !selection.isCollapsed) {
+                    const range = selection.getRangeAt(0);
+                    const selectedElement = range.commonAncestorContainer.parentElement;
+                    
+                    if (selectedElement.isContentEditable) {
+                        const rect = range.getBoundingClientRect();
+                        formatToolbar.style.display = 'block';
+                        formatToolbar.style.left = `${rect.left + window.scrollX}px`;
+                        formatToolbar.style.top = `${rect.top + window.scrollY - formatToolbar.offsetHeight - 5}px`;
+                        return;
+                    }
+                }
+                formatToolbar.style.display = 'none';
+            });
+
+            formatToolbar.addEventListener('click', (e) => {
+                const button = e.target.closest('button, input');
+                if (button) {
+                    const command = button.dataset.command;
+                    const value = button.type === 'color' ? button.value : null;
+                    document.execCommand(command, false, value);
+                }
+            });
+             formatToolbar.addEventListener('change', (e) => {
+                if (e.target.type === 'color') {
+                    document.execCommand('foreColor', false, e.target.value);
+                }
+            });
+
+
+            // --- 3. Luyện phát âm ---
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
+            let mediaRecorder;
+            let audioChunks = [];
+
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+            } else {
+                console.warn("Speech Recognition API không được hỗ trợ trên trình duyệt này.");
+            }
+
+            const calculateSimilarity = (original, recognized) => {
+                const originalWords = original.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+                const recognizedWords = recognized.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+                
+                if (originalWords.length === 0) return recognizedWords.length === 0 ? 100 : 0;
+                
+                let matches = 0;
+                const recognizedSet = new Set(recognizedWords);
+                
+                originalWords.forEach(word => {
+                    if (recognizedSet.has(word)) {
+                        matches++;
+                        recognizedSet.delete(word); // Prevent matching the same word multiple times
+                    }
+                });
+                return (matches / originalWords.length) * 100;
+            };
+
+            lyricsContainer.addEventListener('click', async (e) => {
+                const micBtn = e.target.closest('.mic-btn');
+                if (!micBtn || !SpeechRecognition) return;
+                
+                e.stopPropagation(); // Ngăn sự kiện click tua video
+                
+                if (micBtn.classList.contains('recording')) {
+                    recognition.stop();
+                    if (mediaRecorder && mediaRecorder.state === "recording") {
+                        mediaRecorder.stop();
+                    }
+                    micBtn.classList.remove('recording');
+                    micBtn.textContent = '🎤';
                     return;
                 }
-                postToPlayer({ command: 'ping' });
-            }, 250);
-        }
-        
-        function postToPlayer(message) {
-            if (player && player.contentWindow) {
-                player.contentWindow.postMessage(JSON.stringify(message), "https://www.dailymotion.com");
-            }
-        }
-        
-        let lastHighlightedId = null;
-        function handleTimeUpdate(currentTime) {
-            if (userScrolling) return;
 
-            let activeSub = null;
-            for (let i = subtitles.length - 1; i >= 0; i--) {
-                if (currentTime >= subtitles[i].time) {
-                    activeSub = subtitles[i];
-                    break;
-                }
-            }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micBtn.classList.add('recording');
+                    micBtn.textContent = '🛑';
 
-            if (activeSub && activeSub.id !== lastHighlightedId) {
-                if(lastHighlightedId) {
-                    const oldEl = document.getElementById(lastHighlightedId);
-                    if(oldEl) oldEl.classList.remove('highlight');
-                }
+                    // Setup MediaRecorder for playback
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const parent = micBtn.parentElement;
 
-                const newEl = document.getElementById(activeSub.id);
-                if (newEl) {
-                    newEl.classList.add('highlight');
-                    const containerRect = subtitleContainer.getBoundingClientRect();
-                    const elRect = newEl.getBoundingClientRect();
-                    const offset = elRect.top - containerRect.top - (containerRect.height / 2) + (elRect.height / 2);
-                    subtitleContainer.scrollTo({
-                        top: subtitleContainer.scrollTop + offset,
-                        behavior: 'smooth'
-                    });
-                }
-                lastHighlightedId = activeSub.id;
-            }
-        }
+                        let listenBtn = parent.querySelector('.listen-again-btn');
+                        if (!listenBtn) {
+                            listenBtn = document.createElement('button');
+                            listenBtn.className = 'listen-again-btn';
+                            listenBtn.textContent = 'Nghe lại';
+                            parent.appendChild(listenBtn);
+                        }
+                        listenBtn.onclick = (event) => {
+                            event.stopPropagation();
+                            new Audio(audioUrl).play();
+                        };
+                        stream.getTracks().forEach(track => track.stop()); // Tắt micro
+                    };
+                    
+                    mediaRecorder.start();
+                    
+                    // Setup SpeechRecognition
+                    const originalText = micBtn.closest('.en-line').querySelector('.text-content').textContent;
+                    const scoreSpan = micBtn.parentElement.querySelector('.score');
+                    scoreSpan.textContent = 'Đang nghe...';
 
-        // --- Pronunciation Practice ---
-        async function startPronunciationPractice(subId) {
-            if (!recognition) {
-                alert("Trình duyệt của bạn không hỗ trợ tính năng nhận dạng giọng nói.");
-                return;
-            }
-            const sub = subtitles.find(s => s.id === subId);
-            const resultEl = document.getElementById(`result-${subId}`);
-            const recordBtn = document.querySelector(`#${subId} .record-btn`);
+                    recognition.onresult = (event) => {
+                        const recognizedText = event.results[0][0].transcript;
+                        const score = calculateSimilarity(originalText, recognizedText);
+                        scoreSpan.textContent = `${score.toFixed(0)}%`;
+                        scoreSpan.title = `Bạn nói: "${recognizedText}"`;
+                    };
 
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                recognition.stop();
-                return;
-            }
+                    recognition.onerror = (event) => {
+                        console.error('Lỗi nhận dạng giọng nói:', event.error);
+                        scoreSpan.textContent = `Lỗi: ${event.error}`;
+                    };
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const listenBtn = document.createElement('button');
-                    listenBtn.textContent = 'Nghe lại';
-                    listenBtn.className = 'ml-2 bg-gray-200 px-2 py-1 rounded text-xs hover:bg-gray-300';
-                    listenBtn.onclick = () => new Audio(audioUrl).play();
-                    const oldListenBtn = resultEl.querySelector('button');
-                    if(oldListenBtn) oldListenBtn.remove();
-                    resultEl.appendChild(listenBtn);
-                    stream.getTracks().forEach(track => track.stop());
-                };
-                recognition.onstart = () => {
-                    resultEl.innerHTML = '<i>Đang nghe...</i>';
-                    recordBtn.innerHTML = '<i class="fas fa-stop-circle"></i>';
-                    recordBtn.classList.add('text-blue-500');
-                };
-                recognition.onresult = event => {
-                    const recognizedText = event.results[0][0].transcript;
-                    const originalText = sub.en.replace(/<[^>]*>?/gm, '');
-                    const score = calculateSimilarity(recognizedText, originalText);
-                    resultEl.innerHTML = `<span>Điểm: <b>${score.toFixed(1)}%</b>. Bạn nói: "${recognizedText}"</span>`;
-                };
-                recognition.onerror = event => {
-                    console.error('Lỗi nhận dạng giọng nói:', event.error);
-                    resultEl.textContent = `Lỗi: ${event.error}`;
-                };
-                recognition.onend = () => {
-                    recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                    recordBtn.classList.remove('text-blue-500');
-                    if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-                };
-                mediaRecorder.start();
-                recognition.start();
-            } catch (err) {
-                console.error("Lỗi truy cập micro:", err);
-                resultEl.textContent = 'Không thể truy cập micro.';
-            }
-        }
+                    recognition.onend = () => {
+                        micBtn.classList.remove('recording');
+                        micBtn.textContent = '🎤';
+                         if (mediaRecorder && mediaRecorder.state === "recording") {
+                            mediaRecorder.stop();
+                        }
+                    };
+                    
+                    recognition.start();
 
-        function calculateSimilarity(str1, str2) {
-            const s1 = str1.toLowerCase(), s2 = str2.toLowerCase();
-            const longer = s1.length > s2.length ? s1 : s2;
-            const shorter = s1.length > s2.length ? s2 : s1;
-            if (longer.length === 0) return 100.0;
-            const distance = levenshteinDistance(longer, shorter);
-            return (longer.length - distance) / parseFloat(longer.length) * 100.0;
-        }
-
-        function levenshteinDistance(a, b) {
-            const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-            for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
-            for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
-            for (let j = 1; j <= b.length; j += 1) {
-                for (let i = 1; i <= a.length; i += 1) {
-                    const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-                    matrix[j][i] = Math.min(matrix[j][i - 1] + 1, matrix[j - 1][i] + 1, matrix[j - 1][i - 1] + indicator);
-                }
-            }
-            return matrix[b.length][a.length];
-        }
-
-        // --- Inline Editing ---
-        let currentEditingElement = null;
-        function makeEditable(e) {
-            const el = e.target;
-            el.contentEditable = true;
-            el.focus();
-            currentEditingElement = el;
-            el.addEventListener('blur', stopEditing);
-            el.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    el.blur();
+                } catch (err) {
+                    console.error("Không thể truy cập micro:", err);
+                    alert("Không thể truy cập micro. Vui lòng cấp quyền cho trang web.");
                 }
             });
-            document.addEventListener('selectionchange', showToolbar);
-            showToolbar();
-        }
-        function stopEditing(e) {
-            const el = e.target;
-            el.contentEditable = false;
-            el.removeEventListener('blur', stopEditing);
-            const lineEl = el.closest('[data-time]');
-            const subId = lineEl.id, lang = el.dataset.lang;
-            const subIndex = subtitles.findIndex(s => s.id === subId);
-            if (subIndex > -1) subtitles[subIndex][lang] = el.innerHTML;
-            hideToolbar();
-            document.removeEventListener('selectionchange', showToolbar);
-            currentEditingElement = null;
-        }
-        function showToolbar() {
-            if (!currentEditingElement) return;
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) {
-                hideToolbar();
-                return;
-            }
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            editorToolbar.style.display = 'flex';
-            editorToolbar.style.left = `${rect.left + window.scrollX + (rect.width / 2) - (editorToolbar.offsetWidth / 2)}px`;
-            editorToolbar.style.top = `${rect.top + window.scrollY - editorToolbar.offsetHeight - 5}px`;
-        }
-        function hideToolbar() { editorToolbar.style.display = 'none'; }
-        document.getElementById('bold-btn').addEventListener('click', () => document.execCommand('bold'));
-        document.getElementById('italic-btn').addEventListener('click', () => document.execCommand('italic'));
-        document.getElementById('underline-btn').addEventListener('click', () => document.execCommand('underline'));
-        document.getElementById('color-picker').addEventListener('input', (e) => document.execCommand('foreColor', false, e.target.value));
 
-        // --- Save/Load Session ---
-        function saveSession() {
-            if (!videoIdInput.value) {
-                alert('Không có gì để lưu.');
-                return;
-            }
-            const sessionData = {
-                videoId: videoIdInput.value,
-                enSubtitles: enSubtitlesInput.value,
-                viSubtitles: viSubtitlesInput.value,
-                editedSubtitles: subtitles 
-            };
-            const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `session-${sessionData.videoId}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            statusEl.textContent = 'Đã lưu phiên làm việc!';
-        }
-        function loadSession(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const sessionData = JSON.parse(e.target.result);
-                    videoIdInput.value = sessionData.videoId;
-                    enSubtitlesInput.value = sessionData.enSubtitles;
-                    viSubtitlesInput.value = sessionData.viSubtitles;
-                    statusEl.textContent = 'Đã tải dữ liệu. Nhấn "Tải & Hiển thị" để bắt đầu.';
-                    if (sessionData.editedSubtitles && sessionData.editedSubtitles.length > 0) {
-                        subtitles = sessionData.editedSubtitles;
-                        displaySubtitles();
-                        if(sessionData.videoId) setupPlayer(sessionData.videoId);
-                    }
-                } catch (error) {
-                    alert('Tệp tin không hợp lệ hoặc bị lỗi.');
-                    console.error('Lỗi khi tải phiên:', error);
+
+            // --- 4. Lưu và Mở lại phiên làm việc ---
+
+            const saveSession = () => {
+                if (subtitles.length === 0) {
+                    alert('Không có dữ liệu để lưu.');
+                    return;
                 }
+                // Lấy nội dung đã chỉnh sửa
+                const currentSubData = Array.from(lyricsContainer.querySelectorAll('.line-pair')).map(pair => ({
+                    time: parseFloat(pair.dataset.time),
+                    en: pair.querySelector('.en-line .text-content').innerHTML,
+                    vi: pair.querySelector('.vi-line .text-content').innerHTML,
+                }));
+
+                const sessionData = {
+                    videoId: videoIdInput.value,
+                    subtitles: currentSubData
+                };
+
+                const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `session_${videoIdInput.value || 'data'}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             };
-            reader.readAsText(file);
-        }
+
+            const loadSession = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        videoIdInput.value = data.videoId;
+                        
+                        // Clear textareas
+                        enSubtitlesInput.value = '';
+                        viSubtitlesInput.value = '';
+
+                        subtitles = data.subtitles;
+                        
+                        displaySubtitles();
+                        initDailymotionPlayer(data.videoId);
+
+                    } catch (error) {
+                        alert('Tệp JSON không hợp lệ hoặc bị lỗi.');
+                        console.error('Lỗi khi đọc tệp JSON:', error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            // Gán sự kiện
+            loadBtn.addEventListener('click', loadContent);
+            saveBtn.addEventListener('click', saveSession);
+            loadFileInput.addEventListener('change', loadSession);
+        });
     </script>
+
 </body>
 </html>
