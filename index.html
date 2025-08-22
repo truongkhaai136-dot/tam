@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Transcript (EN + VI) - Dailymotion Version</title>
+<title>Transcript (EN + VI) - Dailymotion Version (Synced v2)</title>
 <style>
     body { font-family: Arial, sans-serif; }
     #player { margin-bottom: 15px; max-width: 800px; margin-left: auto; margin-right: auto; }
@@ -96,10 +96,8 @@
   let scrollTimeout = null;
   let isPlaying = false;
 
-  async function trackCurrentLine() {
-    if (!player) return;
-
-    const currentTime = await player.getCurrentTime();
+  function updateHighlight(currentTime) {
+    if (!Array.isArray(transcriptData) || transcriptData.length === 0) return;
     let currentId = null;
     for (let i = 0; i < transcriptData.length; i++) {
       const line = transcriptData[i];
@@ -114,26 +112,24 @@
       if (activeEl) {
         activeEl.classList.add('highlight');
         if (!userScrolling) {
-            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
     }
-
-    requestAnimationFrame(trackCurrentLine);
   }
 
   function parseTranscript(raw) {
-    const lines = raw.trim().split('\n');
+    const lines = raw.trim().split('\\n');
     const parsed = [];
     let currentTime = null, currentText = [];
     for (const line of lines) {
-      const match = line.match(/^(\d+):(\d{2})$/);
+      const match = line.match(/^(\\d+):(\\d{2})$/);
       if (match) {
         if (currentTime !== null && currentText.length)
           parsed.push({ time: currentTime, text: currentText.join('<br>') });
         currentTime = parseInt(match[1]) * 60 + parseInt(match[2]);
         currentText = [];
-      } else {
+      } else if (line.trim().length > 0) {
         currentText.push(line.trim());
       }
     }
@@ -148,7 +144,7 @@
     div.dataset.time = time;
     div.id = id;
     div.innerHTML = fallbackText;
-    div.onclick = () => { if (player?.seek) player.seek(time); };
+    div.onclick = () => { if (player && typeof player.seek === 'function') player.seek(time); };
 
     if (className === 'user') {
       const btn = document.createElement('button');
@@ -189,35 +185,32 @@
 
         toggleBtn.onclick = function () {
           if (!player) return;
-          if (isPlaying) {
-              player.pause();
-          } else {
-              player.play();
-          }
+          if (isPlaying) { player.pause(); } else { player.play(); }
         };
 
+        // --- events ---
         player.on('play', () => { 
-            isPlaying = true;
-            toggleBtn.textContent = 'Pause';
-            toggleBtn.style.backgroundColor = '#28a745';
+          isPlaying = true;
+          toggleBtn.textContent = 'Pause';
+          toggleBtn.style.backgroundColor = '#28a745';
         });
         player.on('pause', () => { 
-            isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#f44336';
+          isPlaying = false;
+          toggleBtn.textContent = 'Play'; 
+          toggleBtn.style.backgroundColor = '#f44336';
         });
         player.on('end', () => { 
-            isPlaying = false;
-            toggleBtn.textContent = 'Play'; 
-            toggleBtn.style.backgroundColor = '#6c757d';
+          isPlaying = false;
+          toggleBtn.textContent = 'Play'; 
+          toggleBtn.style.backgroundColor = '#6c757d';
         });
-        player.on('seeked', () => {
-            trackCurrentLine();
+        player.on('timeupdate', (e) => {
+          // e.time is current time in seconds
+          updateHighlight(e?.time || 0);
         });
-
-        // start tracking transcript after player created
-        trackCurrentLine();
-
+        player.on('seeked', (e) => {
+          updateHighlight(e?.time || 0);
+        });
       } catch (e) {
         console.error("Error creating Dailymotion player:", e);
         alert("Could not create Dailymotion player. Check the video ID and console for errors.");
@@ -253,155 +246,178 @@ document.getElementById('transcript').addEventListener('wheel', () => {
 });
 
 document.addEventListener('dblclick', e => {
-    const line = e.target.closest('.line');
-    if (line) {
-      line.contentEditable = true;
-      line.focus();
-    }
-  });
+  const line = e.target.closest('.line');
+  if (line) {
+    line.contentEditable = true;
+    line.focus();
+  }
+});
 
 document.addEventListener('mouseup', e => {
-    const sel = window.getSelection();
-    if (sel.toString().length > 0 && sel.getRangeAt(0).startContainer.parentElement.closest('.line')) {
+  const sel = window.getSelection();
+  if (sel && sel.toString().length > 0 && sel.rangeCount > 0) {
+    const parentLine = sel.getRangeAt(0).startContainer.parentElement.closest('.line');
+    if (parentLine) {
       const rect = sel.getRangeAt(0).getBoundingClientRect();
       const toolbar = document.getElementById('toolbar');
       toolbar.style.top = `${window.scrollY + rect.top - 40}px`;
       toolbar.style.left = `${window.scrollX + rect.left}px`;
       toolbar.style.display = 'block';
-    } else {
-      document.getElementById('toolbar').style.display = 'none';
-    }
-  });
-
-  function execCmd(cmd, value = null) {
-    document.execCommand(cmd, false, value);
-  }
-
-  function startSpeechRecognition(div, expectedText) {
-    const oldResult = div.querySelector('.result');
-    if (oldResult) oldResult.remove();
-    const oldPlayback = div.querySelector('.playback-container');
-    if (oldPlayback) oldPlayback.remove();
-
-    if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
-      alert('Speech recognition or recording not supported in this browser');
       return;
     }
+  }
+  document.getElementById('toolbar').style.display = 'none';
+});
 
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            const mediaRecorder = new MediaRecorder(stream);
-            const audioChunks = [];
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const playbackContainer = document.createElement('div');
-                playbackContainer.className = 'playback-container result';
-                const listenButton = document.createElement('button');
-                listenButton.textContent = '▶️ Listen Again';
-                listenButton.style.marginTop = '5px';
-                listenButton.onclick = () => new Audio(audioUrl).play();
-                playbackContainer.appendChild(listenButton);
-                div.appendChild(playbackContainer);
-            };
-            mediaRecorder.start();
+function execCmd(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+}
 
-            const recognition = new webkitSpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            recognition.onend = () => {
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop());
-            };
-            recognition.onresult = function(event) {
-                const spokenText = event.results[0][0].transcript;
-                const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\[.*?\]\s*/g, '').toLowerCase());
-                const resultEl = document.createElement('div');
-                resultEl.className = 'result';
-                resultEl.innerHTML = `You said: "<em>${spokenText}</em>" → Similarity: <b>${Math.round(score * 100)}%</b>`;
-                div.appendChild(resultEl);
-            };
-            recognition.onerror = function(event) {
-                alert('Error occurred in recognition: '  + event.error);
-                mediaRecorder.stop();
-            };
-            recognition.start();
-        })
-        .catch(err => {
-            alert('Could not access the microphone. Please grant permission.');
-            console.error("Error accessing microphone:", err);
-        });
+function startSpeechRecognition(div, expectedText) {
+  const oldResult = div.querySelector('.result');
+  if (oldResult) oldResult.remove();
+  const oldPlayback = div.querySelector('.playback-container');
+  if (oldPlayback) oldPlayback.remove();
+
+  if (!('webkitSpeechRecognition' in window) || !navigator.mediaDevices) {
+    alert('Speech recognition or recording not supported in this browser');
+    return;
   }
 
-  function similarity(s1, s2) {
-    const longer = s1.length > s2.length ? s1 : s2;
-    const shorter = s1.length > s2.length ? s2 : s1;
-    const longerLength = longer.length;
-    if (longerLength === 0) return 1.0;
-    return (longerLength - editDistance(longer, shorter)) / longerLength;
-  }
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks = [];
+      mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const playbackContainer = document.createElement('div');
+        playbackContainer.className = 'playback-container result';
+        const listenButton = document.createElement('button');
+        listenButton.textContent = '▶️ Listen Again';
+        listenButton.style.marginTop = '5px';
+        listenButton.onclick = () => new Audio(audioUrl).play();
+        playbackContainer.appendChild(listenButton);
+        div.appendChild(playbackContainer);
+      };
+      mediaRecorder.start();
 
-  function editDistance(s1, s2) {
-    s1 = s1.toLowerCase();
-    s2 = s2.toLowerCase();
-    const costs = [];
-    for (let i = 0; i <= s1.length; i++) {
-      let lastValue = i;
-      for (let j = 0; j <= s2.length; j++) {
-        if (i === 0) costs[j] = j;
-        else if (j > 0) {
-          let newValue = costs[j - 1];
-          if (s1.charAt(i - 1) !== s2.charAt(j - 1))
-            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-          costs[j - 1] = lastValue;
-          lastValue = newValue;
-        }
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onend = () => {
+        mediaRecorder.stop();
+        stream.getTracks().forEach(track => track.stop());
+      };
+      recognition.onresult = function(event) {
+        const spokenText = event.results[0][0].transcript;
+        const score = similarity(spokenText.toLowerCase(), expectedText.replace(/\\[.*?\\]\\s*/g, '').toLowerCase());
+        const resultEl = document.createElement('div');
+        resultEl.className = 'result';
+        resultEl.innerHTML = `You said: \"<em>${spokenText}</em>\" → Similarity: <b>${Math.round(score * 100)}%</b>`;
+        div.appendChild(resultEl);
+      };
+      recognition.onerror = function(event) {
+        alert('Error occurred in recognition: '  + event.error);
+        mediaRecorder.stop();
+      };
+      recognition.start();
+    })
+    .catch(err => {
+      alert('Could not access the microphone. Please grant permission.');
+      console.error("Error accessing microphone:", err);
+    });
+}
+
+function similarity(s1, s2) {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1.0;
+  return (longerLength - editDistance(longer, shorter)) / longerLength;
+}
+
+function editDistance(s1, s2) {
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
+  const costs = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) costs[j] = j;
+      else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
       }
-      if (i > 0) costs[s2.length] = lastValue;
     }
-    return costs[s2.length];
+    if (i > 0) costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
+
+function saveScripts() {
+  const videoId = document.getElementById('videoIdInput').value.trim();
+  const lines = document.querySelectorAll('.line');
+  const enChunks = [];
+  const viChunks = [];
+
+  for (const line of lines) {
+    const time = parseInt(line.dataset.time || '0', 10);
+    const minutes = Math.floor(time / 60);
+    const seconds = (time % 60).toString().padStart(2, '0');
+
+    // Clone node and strip dynamic UI elements before serializing
+    const clone = line.cloneNode(true);
+    clone.querySelectorAll('button.record-btn, .result, .playback-container').forEach(el => el.remove());
+
+    let content = clone.innerHTML
+      .replace(/<br\\s*\\/?>(?![^<]*>)/gi, '\\n') // br -> newline
+      .replace(/<br\\s*\\/?>(?=)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?i)/gi, '\\n') // harmless if not supported; kept for safety
+      .replace(/<br\\s*\\/?>(?m)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?s)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?g)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?u)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?y)/gi, '\\n')
+      .replace(/<br\\s*\\/?>(?)/gi, '\\n')
+      .replace(/<[^>]+>/g, '')              // strip HTML
+      .replace(/\\n{2,}/g, '\\n')           // collapse multiple newlines
+      .trim();
+
+    // Fallback simple replace if above failed
+    if (content.indexOf('\\n') === -1 && /<br/i.test(clone.innerHTML)) {
+      content = clone.innerHTML.replace(/<br\\s*\\/?>(?i)/gi, '\\n').replace(/<[^>]+>/g, '').trim();
+    }
+
+    let block;
+    if (line.classList.contains('user')) {
+      const cleanContent = content.replace(/^\\[\\d+:\\d{2}\\]\\s*/, '');
+      block = `${minutes}:${seconds}\\n${cleanContent}`;
+      enChunks.push(block);
+    } else if (line.classList.contains('machine')) {
+      const cleanContent = content.replace(/^\\[VI\\]\\s*/, '');
+      block = `${minutes}:${seconds}\\n${cleanContent}`;
+      viChunks.push(block);
+    }
   }
 
-  function saveScripts() {
-    const videoId = document.getElementById('videoIdInput').value.trim();
-    const lines = document.querySelectorAll('.line');
-    const enChunks = [];
-    const viChunks = [];
-    for (const line of lines) {
-        const time = parseInt(line.dataset.time || '0');
-        const minutes = Math.floor(time / 60);
-        const seconds = (time % 60).toString().padStart(2, '0');
-        let content = line.innerHTML
-            .replace(/<button[^>]*>.*?<\/button>/g, '')
-            .replace(/<div class=\"result.*?\">.*?<\/div>/g, '')
-            .replace(/<br\s*\/?>(?i)/gi, '\n')
-            .replace(/<[^>]+>/g, '')
-            .replace(/\n{2,}/g, '\n')
-            .trim();
-        let block;
-        if (line.classList.contains('user')) {
-            const cleanContent = content.replace(/^\[\d+:\d{2}\]\s*/, '');
-            block = `${minutes}:${seconds}\n${cleanContent}`;
-            enChunks.push(block);
-        } else if (line.classList.contains('machine')) {
-            const cleanContent = content.replace(/^\[VI\]\s*/, '');
-            block = `${minutes}:${seconds}\n${cleanContent}`;
-            viChunks.push(block);
-        }
-    }
-    const blob = new Blob([JSON.stringify({
-        videoId,
-        enText: enChunks.join('\n\n'),
-        viText: viChunks.join('\n\n')
-    }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transcript_${videoId || 'video'}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const blob = new Blob([JSON.stringify({
+    videoId,
+    enText: enChunks.join('\\n\\n'),
+    viText: viChunks.join('\\n\\n')
+  }, null, 2)], { type: 'application/json' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `transcript_${videoId || 'video'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function loadScriptFile(event) {
