@@ -161,7 +161,7 @@
             }, 2000);
         });
 
-        // [FIXED] Listen for messages from the Dailymotion player iframe
+        // Listen for messages from the Dailymotion player iframe
         window.addEventListener('message', (event) => {
             if (event.origin !== "https://www.dailymotion.com") return;
             try {
@@ -170,15 +170,18 @@
 
                 switch (data.event) {
                     case 'apiready':
+                        console.log("Player API is ready.");
                         isPlayerReady = true;
                         statusEl.textContent = 'Sẵn sàng. Bắt đầu phát video.';
-                        // [FIX] Thêm độ trễ nhỏ để đảm bảo player sẵn sàng nhận lệnh
+                        // [FIXED] Tăng độ trễ để đảm bảo player đã khởi tạo hoàn toàn
                         setTimeout(() => {
+                            console.log("Sending 'addEventListener' commands to player.");
                             postToPlayer({ command: 'addEventListener', parameters: ['timeupdate'] });
                             postToPlayer({ command: 'addEventListener', parameters: ['play'] });
-                        }, 150);
+                        }, 250); // Tăng độ trễ lên 250ms
                         break;
                     case 'play':
+                        console.log("Player event: play");
                         statusEl.textContent = 'Video đang phát...';
                         break;
                     case 'timeupdate':
@@ -344,8 +347,8 @@
             player.id = PLAYER_ID;
             player.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&id=${PLAYER_ID}`;
             player.setAttribute('frameborder', '0');
+            // [FIXED] Dọn dẹp thuộc tính allow
             player.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
-            player.setAttribute('allowfullscreen', '');
             playerContainer.appendChild(player);
         }
 
