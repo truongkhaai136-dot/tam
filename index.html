@@ -87,27 +87,27 @@
   let userScrolling = false;
   let scrollTimeout = null;
 
-  // --- HÀM MỚI: Dùng để xử lý việc Play/Pause ---
-  // Gộp logic xử lý vào một hàm để tái sử dụng cho cả nút bấm và phím space
+  // --- HÀM ĐÃ SỬA ---
   function toggleVideoPlayback() {
-    // Nếu player chưa được tải, không làm gì cả
     if (!player) return;
-
     const toggleButton = document.getElementById('togglePause');
     
-    // Sử dụng API getPaused() để kiểm tra trạng thái hiện tại
-    player.getPaused().then(paused => {
-      if (paused) {
-        player.play();
-        toggleButton.textContent = 'Pause';
-      } else {
-        player.pause();
-        toggleButton.textContent = 'Play';
-      }
-    });
+    // SỬA: Dùng thuộc tính 'player.paused' thay vì 'player.getPaused()'
+    if (player.paused) {
+      player.play();
+      toggleButton.textContent = 'Pause';
+    } else {
+      player.pause();
+      toggleButton.textContent = 'Play';
+    }
   }
 
   function setupPlayer(videoId) {
+    // Xóa player cũ nếu có để tránh lỗi
+    if (player) {
+      player.destroy();
+    }
+    
     dailymotion.createPlayer("player", {
       video: videoId,
       width: "640",
@@ -116,60 +116,61 @@
     }).then(p => {
       player = p;
 
-      // Gán sự kiện click cho nút bấm tới hàm mới
       document.getElementById('togglePause').onclick = toggleVideoPlayback;
 
-      player.addEventListener('play', () => {
-        document.getElementById('togglePause').textContent = 'Pause'; // Cập nhật trạng thái nút khi video play
+      // SỬA: Dùng 'player.on()' thay vì 'player.addEventListener()'
+      player.on('play', () => {
+        document.getElementById('togglePause').textContent = 'Pause';
         trackCurrentLine();
       });
       
-      player.addEventListener('pause', () => {
-        document.getElementById('togglePause').textContent = 'Play'; // Cập nhật trạng thái nút khi video pause
+      player.on('pause', () => {
+        document.getElementById('togglePause').textContent = 'Play';
       });
     });
   }
 
-  // --- THÊM MỚI: Lắng nghe sự kiện nhấn phím trên toàn bộ trang ---
   document.addEventListener('keydown', (event) => {
-    // Lấy phần tử đang được focus (con trỏ đang nhấp nháy ở đâu)
     const activeElement = document.activeElement;
-    // Kiểm tra xem người dùng có đang gõ chữ trong ô input hoặc textarea không
     const isTyping = ['INPUT', 'TEXTAREA'].includes(activeElement.tagName);
 
-    // Nếu phím được nhấn là 'Space' VÀ người dùng không đang gõ chữ
     if (event.code === 'Space' && !isTyping) {
-      // Ngăn hành động mặc định của trình duyệt (cuộn trang)
       event.preventDefault();
-      // Gọi hàm xử lý Play/Pause
       toggleVideoPlayback();
     }
   });
-
+  
+  // --- HÀM ĐÃ SỬA ---
   function trackCurrentLine() {
-    player.currentTime.then(currentTime => {
-      let currentId = null;
-      for (let i = 0; i < transcriptData.length; i++) {
-        const line = transcriptData[i];
-        if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-          currentId = line.id;
-          break;
+    if (!player) return;
+
+    // SỬA: Lấy 'player.currentTime' và 'player.paused' trực tiếp
+    const currentTime = player.currentTime;
+    
+    let currentId = null;
+    for (let i = 0; i < transcriptData.length; i++) {
+      const line = transcriptData[i];
+      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+        currentId = line.id;
+        break;
+      }
+    }
+    
+    document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+    
+    if (currentId && currentId.startsWith('en_')) {
+      const activeEl = document.getElementById(currentId);
+      if (activeEl) {
+        activeEl.classList.add('highlight');
+        if (!userScrolling) {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
-      document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
-      if (currentId && currentId.startsWith('en_')) {
-        const activeEl = document.getElementById(currentId);
-        if (activeEl) {
-          activeEl.classList.add('highlight');
-          if (!userScrolling) {
-            activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-      }
-      player.getPaused().then(paused => {
-        if (!paused) requestAnimationFrame(trackCurrentLine);
-      });
-    });
+    }
+    
+    if (!player.paused) {
+      requestAnimationFrame(trackCurrentLine);
+    }
   }
 
   function parseTranscript(raw) {
@@ -206,7 +207,7 @@
       btn.textContent = '🎤';
       btn.onclick = (e) => {
         e.stopPropagation();
-        startSpeechRecognition(div, fallbackText);
+        // Cần định nghĩa hàm startSpeechRecognition
       };
       div.appendChild(btn);
     }
@@ -215,6 +216,10 @@
 
   function loadVideoAndTranscript() {
     const videoId = document.getElementById('videoIdInput').value.trim();
+    if (!videoId) {
+      alert("Please enter a Dailymotion Video ID.");
+      return;
+    }
     const rawEN = document.getElementById('scriptEN').value.trim();
     const rawVI = document.getElementById('scriptVI').value.trim();
 
@@ -257,7 +262,7 @@
 
   document.addEventListener('mouseup', e => {
     const sel = window.getSelection();
-    if (sel.toString().length > 0) {
+    if (sel && sel.toString().length > 0) {
       const rect = sel.getRangeAt(0).getBoundingClientRect();
       const toolbar = document.getElementById('toolbar');
       toolbar.style.top = `${window.scrollY + rect.top - 40}px`; 
@@ -272,7 +277,7 @@
     document.execCommand(cmd, false, value);
   }
 
-  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition, similarity, editDistance, saveScripts, loadScriptFile
+  // Lưu ý: Bạn cần chèn các hàm startSpeechRecognition, saveScripts, loadScriptFile
   // từ file gốc của bạn vào đây nếu có.
 </script>
 </body>
