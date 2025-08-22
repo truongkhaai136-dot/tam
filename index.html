@@ -98,23 +98,36 @@
     }).then(p => {
       player = p;
 
-      document.getElementById('togglePause').onclick = function () {
-        player.getPaused().then(paused => {
-          if (!paused) {
-            player.pause();
-            this.textContent = 'Play';
-          } else {
-            player.play();
-            this.textContent = 'Pause';
-          }
-        });
-      };
+      // xử lý khi click nút Pause
+      document.getElementById('togglePause').onclick = togglePlayPause;
 
       player.addEventListener('play', () => {
         trackCurrentLine();
       });
     });
   }
+
+  function togglePlayPause() {
+    if (!player) return;
+    player.getPaused().then(paused => {
+      if (!paused) {
+        player.pause();
+        document.getElementById('togglePause').textContent = 'Play';
+      } else {
+        player.play();
+        document.getElementById('togglePause').textContent = 'Pause';
+      }
+    });
+  }
+
+  // --- xử lý phím Space ---
+  document.addEventListener('keydown', function (e) {
+    // ngăn chặn khi gõ Space trong input/textarea
+    if (e.code === 'Space' && !['INPUT','TEXTAREA'].includes(e.target.tagName)) {
+      e.preventDefault();
+      togglePlayPause();
+    }
+  });
 
   function trackCurrentLine() {
     player.currentTime.then(currentTime => {
@@ -141,6 +154,8 @@
       });
     });
   }
+</script>
+
 
   function parseTranscript(raw) {
     const lines = raw.trim().split('\n');
@@ -247,3 +262,4 @@
 </script>
 </body>
 </html>
+
