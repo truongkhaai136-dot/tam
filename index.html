@@ -64,43 +64,6 @@
   let transcriptData = [];
   let userScrolling = false;
   let scrollTimeout = null;
-  let isPlaying = false;
-  let animationFrameId = null;
-
-  // SỬA LỖI QUAN TRỌNG NHẤT TẠI ĐÂY
-  // Dựa vào lỗi trong Console, chúng ta sửa lại hoàn toàn hàm này.
-  function trackCurrentLine() {
-    if (!player || !isPlaying) {
-      cancelAnimationFrame(animationFrameId);
-      return;
-    }
-
-    // SỬA LỖI: Dùng `player.currentTime` (thuộc tính) thay vì `player.getCurrentTime()` (hàm không tồn tại)
-    // Đây là cách lấy thời gian đồng bộ, không cần .then() nữa.
-    const currentTime = player.currentTime;
-
-    let currentId = null;
-    for (let i = 0; i < transcriptData.length; i++) {
-      const line = transcriptData[i];
-      if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
-        currentId = line.id;
-        break;
-      }
-    }
-
-    const activeEl = document.getElementById(currentId);
-    if (activeEl && !activeEl.classList.contains('highlight')) {
-      document.querySelectorAll('.line.highlight').forEach(el => el.classList.remove('highlight'));
-      activeEl.classList.add('highlight');
-      if (!userScrolling) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    // Tiếp tục vòng lặp
-    animationFrameId = requestAnimationFrame(trackCurrentLine);
-  }
-
 
   function parseTranscript(raw) {
     const lines = raw.trim().split('\n');
@@ -169,33 +132,48 @@
 
         toggleBtn.onclick = function () {
           if (!player) return;
-          if (isPlaying) {
-              player.pause();
-          } else {
+          // Thay vì dùng biến isPlaying, ta kiểm tra trực tiếp trạng thái của player
+          if (player.paused) {
               player.play();
+          } else {
+              player.pause();
           }
         };
 
+        // === LOGIC ĐỒNG BỘ HÓA MỚI, HIỆU QUẢ HƠN ===
+        player.on('timeupdate', (event) => {
+            const currentTime = event.time; // Lấy thời gian trực tiếp từ sự kiện
+            let currentId = null;
+
+            for (let i = 0; i < transcriptData.length; i++) {
+                const line = transcriptData[i];
+                if (currentTime >= line.time && (i === transcriptData.length - 1 || currentTime < transcriptData[i + 1].time)) {
+                    currentId = line.id;
+                    break;
+                }
+            }
+
+            const activeEl = document.getElementById(currentId);
+            if (activeEl && !activeEl.classList.contains('highlight')) {
+                document.querySelectorAll('.line.highlight').forEach(el => el.classList.remove('highlight'));
+                activeEl.classList.add('highlight');
+                if (!userScrolling) {
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+
         player.on('play', () => { 
-            isPlaying = true;
             toggleBtn.textContent = 'Pause';
             toggleBtn.style.backgroundColor = '#28a745';
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-            animationFrameId = requestAnimationFrame(trackCurrentLine);
         });
         player.on('pause', () => { 
-            isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#f44336';
-            cancelAnimationFrame(animationFrameId);
         });
         player.on('end', () => { 
-            isPlaying = false;
             toggleBtn.textContent = 'Play'; 
             toggleBtn.style.backgroundColor = '#6c757d';
-            cancelAnimationFrame(animationFrameId);
         });
 
       } catch (e) {
@@ -226,13 +204,13 @@
     }
   }
 
-document.getElementById('transcript').addEventListener('wheel', () => {
-  userScrolling = true;
-  clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(() => userScrolling = false, 3000);
-});
+  document.getElementById('transcript').addEventListener('wheel', () => {
+    userScrolling = true;
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => userScrolling = false, 3000);
+  });
 
-document.addEventListener('dblclick', e => {
+  document.addEventListener('dblclick', e => {
     const line = e.target.closest('.line');
     if (line) {
       line.contentEditable = true;
