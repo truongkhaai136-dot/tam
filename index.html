@@ -383,28 +383,37 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function setupVideoPlayer(videoId) {
         playerFrame = document.getElementById('player-iframe');
-        // URL mới sử dụng embed và kích hoạt API postMessage
         playerFrame.src = `https://www.dailymotion.com/embed/video/${videoId}?api=postMessage&autoplay=0`;
+
+        // *** THAY ĐỔI QUAN TRỌNG Ở ĐÂY ***
+        // Chờ cho iframe load xong, sau đó gửi yêu cầu "lắng nghe" sự kiện timeupdate.
+        playerFrame.onload = () => {
+            postPlayerMessage('addEventListener', ['timeupdate']);
+        };
     }
     
-    // Gửi lệnh đến Dailymotion player qua postMessage
     function postPlayerMessage(command, args = []) {
         if (!playerFrame || !playerFrame.contentWindow) return;
-        playerFrame.contentWindow.postMessage({ command: command, parameters: args }, '*');
+        playerFrame.contentWindow.postMessage(JSON.stringify({ command: command, parameters: args }), 'https://www.dailymotion.com');
     }
 
-    // Lắng nghe sự kiện từ Dailymotion player
     window.addEventListener('message', (event) => {
         if (event.origin !== 'https://www.dailymotion.com') {
-            return; // Bảo mật: Chỉ chấp nhận tin nhắn từ Dailymotion
+            return;
         }
         try {
-            const data = JSON.parse(event.data);
-            if (data.event === 'timeupdate') {
-                handleTimeUpdate(data.time);
+            // Dailymotion gửi dữ liệu dưới dạng string, không phải JSON object
+            const data = new URLSearchParams(event.data);
+            const eventName = data.get('event');
+            
+            if (eventName === 'timeupdate') {
+                const currentTime = parseFloat(data.get('time'));
+                if (!isNaN(currentTime)) {
+                    handleTimeUpdate(currentTime);
+                }
             }
         } catch (e) {
-            // Lỗi không phải JSON, bỏ qua
+            console.error("Error parsing message from Dailymotion:", e);
         }
     });
     
